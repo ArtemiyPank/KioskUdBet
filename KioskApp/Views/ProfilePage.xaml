@@ -1,0 +1,23 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KioskApp.Views.ProfilePage"
+             Title="Profile">
+    <StackLayout Padding="20">
+        <Label Text="Profile" FontSize="24" HorizontalOptions="Center" />
+
+        <!-- Отображение информации о пользователе, если он аутентифицирован -->
+        <StackLayout IsVisible="{Binding IsAuthenticated}">
+            <Label Text="Username:" />
+            <Label Text="{Binding CurrentUser.Username}" />
+            <Label Text="Role:" />
+            <Label Text="{Binding CurrentUser.Role}" />
+            <Button Text="Logout" Command="{Binding LogoutCommand}" />
+        </StackLayout>
+
+        <!-- Отображение кнопок входа и регистрации, если пользователь не аутентифицирован -->
+        <StackLayout IsVisible="{Binding IsNotAuthenticated}">
+            <Button Text="Login" Command="{Binding NavigateToLoginCommand}" />
+            <Button Text="Register" Command="{Binding NavigateToRegisterCommand}" />
+        </StackLayout>
+    </StackLayout>
+</ContentPage>

@@ -1,0 +1,20 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:KioskApp.Views"
+             x:Class="KioskApp.Views.ProductsPage"
+             Title="Products">
+
+    <CollectionView ItemsSource="{Binding Products}">
+        <CollectionView.ItemTemplate>
+            <DataTemplate>
+                <StackLayout Padding="10">
+                    <Label Text="{Binding Name}" FontAttributes="Bold" />
+                    <Label Text="{Binding Description}" />
+                    <Label Text="{Binding Price, StringFormat='Price: {0:C}'}" />
+                    <Button Text="Add to Cart" Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProductsPage}}, Path=BindingContext.AddToCartCommand}" CommandParameter="{Binding .}" />
+                </StackLayout>
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+    </CollectionView>
+
+</ContentPage>

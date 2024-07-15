@@ -1,0 +1,12 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:KioskApp.Views"
+             x:Class="KioskApp.Views.CartPage"
+             Title="Checkout">
+
+    <StackLayout Padding="20">
+        <Entry Placeholder="Delivery Location" Text="{Binding DeliveryLocation}" />
+        <Button Text="Place Order" Command="{Binding PlaceOrderCommand}" />
+    </StackLayout>
+
+</ContentPage>
