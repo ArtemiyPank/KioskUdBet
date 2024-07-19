@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KioskAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240716180319_InitialCreate")]
+    [Migration("20240719145751_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -103,7 +103,6 @@ namespace KioskAPI.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FirstName")
@@ -118,8 +117,7 @@ namespace KioskAPI.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Password")
-                        .IsRequired()
+                    b.Property<string>("PasswordHash")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Role")
@@ -127,6 +125,10 @@ namespace KioskAPI.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RoomNumber")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Salt")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

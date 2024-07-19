@@ -1,4 +1,5 @@
-﻿using KioskAPI.Models;
+﻿using BCrypt.Net;
+using KioskAPI.Models;
 using KioskAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,35 @@ namespace KioskAPI.Controllers
         public string Password { get; set; }
     }
 
+    public class UserResponse
+    {
+        public int Id { get; set; }
+        public string Email { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Language { get; set; }
+        public string Building { get; set; }
+        public string RoomNumber { get; set; }
+        public string Role { get; set; }
+    }
 
-    [ApiController]
+
+
+    public class RegistrateRequest
+    {
+        public int Id { get; set; }
+        public string Email { get; set; }
+        public string Password { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Language { get; set; }
+        public string Building { get; set; }
+        public string RoomNumber { get; set; }
+        public string Role { get; set; } = "User";
+    }
+
+
+        [ApiController]
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
@@ -32,28 +60,71 @@ namespace KioskAPI.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(User user)
+        public async Task<IActionResult> Register(RegistrateRequest request)
         {
-            if (await _userService.EmailExists(user.Email))
+            if (await _userService.EmailExists(request.Email))
             {
                 return BadRequest("Email already exists.");
             }
+
+            var user = new User
+            {
+                Id = request.Id,
+                Email = request.Email,
+                Salt = BCrypt.Net.BCrypt.GenerateSalt(), // генерация соли
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                Language = request.Language,
+                Building = request.Building,
+                RoomNumber = request.RoomNumber,
+            };
+
+            // Хеширование пароля с солью
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password + user.Salt);
+
             var newUser = await _userService.Register(user);
             var token = GenerateJwtToken(newUser);
-            return Ok(new { user = newUser, token });
+
+            var userResponse = new UserResponse
+            {
+                Id = newUser.Id,
+                Email = newUser.Email,
+                FirstName = newUser.FirstName,
+                LastName = newUser.LastName,
+                Language = newUser.Language,
+                Building = newUser.Building,
+                RoomNumber = newUser.RoomNumber,
+                Role = newUser.Role
+            };
+
+            return Ok(new { user = userResponse, token });
         }
 
         [HttpPost("authenticate")]
         public async Task<IActionResult> Authenticate([FromBody] AuthenticateRequest request)
         {
-            var user = await _userService.Authenticate(request.Email, request.Password);
-            _logger.LogInformation(request.Email, request.Password);
+            var user = await _userService.GetUserByEmail(request.Email);
             if (user == null) return Unauthorized();
+
+            // Проверка пароля
+            var isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password + user.Salt, user.PasswordHash);
+            if (!isPasswordValid) return Unauthorized();
+
             var token = GenerateJwtToken(user);
 
-            //_logger.LogInformation(user.ToString(), token);
+            var userResponse = new UserResponse
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Language = user.Language,
+                Building = user.Building,
+                RoomNumber = user.RoomNumber,
+                Role = user.Role
+            };
 
-            return Ok(new { user, token });
+            return Ok(new { user = userResponse, token });
         }
 
         [HttpGet("authenticateWithToken")]
@@ -76,8 +147,20 @@ namespace KioskAPI.Controllers
                     return Unauthorized();
                 }
 
+                var userResponse = new UserResponse
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Language = user.Language,
+                    Building = user.Building,
+                    RoomNumber = user.RoomNumber,
+                    Role = user.Role
+                };
+
                 _logger.LogInformation($"User {user.Email} authenticated successfully");
-                return Ok(new { user });
+                return Ok(new { user = userResponse });
             }
             catch (Exception ex)
             {
@@ -85,9 +168,6 @@ namespace KioskAPI.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-
-
-
 
         private string GenerateJwtToken(User user)
         {
@@ -97,8 +177,8 @@ namespace KioskAPI.Controllers
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-            new Claim(JwtRegisteredClaimNames.Email, user.Email.ToString()),
-            new Claim(ClaimTypes.Role, user.Role)
+                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                    new Claim(ClaimTypes.Role, user.Role)
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -106,7 +186,5 @@ namespace KioskAPI.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
-
-
     }
 }
