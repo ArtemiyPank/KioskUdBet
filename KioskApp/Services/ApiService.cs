@@ -26,7 +26,7 @@ namespace KioskApp.Services
                 var result = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
                 var registeredUser = System.Text.Json.JsonSerializer.Deserialize<User>(result["user"].ToString());
                 var token = result["token"].ToString();
-                Debug.WriteLine($"Registered User: {registeredUser.Username}");
+                Debug.WriteLine($"Registered User: {registeredUser.Email}");
                 return (registeredUser, token);
             }
             catch (Exception ex)
@@ -36,11 +36,11 @@ namespace KioskApp.Services
             }
         }
 
-        public async Task<(User, string)> AuthenticateUser(string username, string password)
+        public async Task<(User, string)> AuthenticateUser(string email, string password)
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("/api/users/authenticate", new { username, password });
+                var response = await _httpClient.PostAsJsonAsync("/api/users/authenticate", new { email, password });
                 response.EnsureSuccessStatusCode();
 
                 //Распоковка ответа
@@ -50,7 +50,7 @@ namespace KioskApp.Services
                 var token = jsonObject.GetProperty("token").GetString();
                 var user = JsonSerializer.Deserialize<User>(userJson);
 
-                Debug.WriteLine($"AuthenticateUser user : {user.Username}");
+                Debug.WriteLine($"AuthenticateUser user : {user.Email}");
                 Debug.WriteLine($"AuthenticateUser token : {token}");
 
                 return (user, token);

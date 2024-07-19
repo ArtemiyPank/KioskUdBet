@@ -53,7 +53,6 @@ namespace KioskApp.ViewModels
 
         public void UpdateUserState()
         {
-            var currentUser = _userService.GetCurrentUser();
             OnPropertyChanged(nameof(CurrentUser));
             OnPropertyChanged(nameof(IsAuthenticated));
             OnPropertyChanged(nameof(IsNotAuthenticated));

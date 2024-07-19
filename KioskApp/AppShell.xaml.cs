@@ -40,7 +40,7 @@ namespace KioskApp
         {
             var profileViewModel = new ProfileViewModel();
             profileViewModel.UpdateUserState();
-            Debug.WriteLine($"Updated Profile Page with User: {profileViewModel.CurrentUser?.Username}");
+            Debug.WriteLine($"Updated Profile Page with User: {profileViewModel.CurrentUser?.Email}");
             if (Shell.Current.CurrentPage is ProfilePage profilePage)
             {
                 profilePage.BindingContext = profileViewModel;

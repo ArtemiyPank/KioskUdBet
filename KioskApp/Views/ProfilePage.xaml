@@ -7,10 +7,18 @@
 
         <!-- Отображение информации о пользователе, если он аутентифицирован -->
         <StackLayout IsVisible="{Binding IsAuthenticated}">
-            <Label Text="Username:" />
-            <Label Text="{Binding CurrentUser.Username}" />
-            <Label Text="Role:" />
-            <Label Text="{Binding CurrentUser.Role}" />
+            <Label Text="Email:" />
+            <Label Text="{Binding CurrentUser.Email}" />
+            <Label Text="First Name:" />
+            <Label Text="{Binding CurrentUser.FirstName}" />
+            <Label Text="Last Name:" />
+            <Label Text="{Binding CurrentUser.LastName}" />
+            <Label Text="Building:" />
+            <Label Text="{Binding CurrentUser.Building}" />
+            <Label Text="Room Number:" />
+            <Label Text="{Binding CurrentUser.RoomNumber}" />
+            <Label Text="Language:" />
+            <Label Text="{Binding CurrentUser.Language}" />
             <Button Text="Logout" Command="{Binding LogoutCommand}" />
         </StackLayout>
 

@@ -10,5 +10,6 @@ namespace KioskAPI.Services
         Task<User> Register(User user);
         Task<List<User>> GetAllUsers();
         Task<User> GetUserByToken(string token);
+        Task<bool> EmailExists(string email);
     }
 }

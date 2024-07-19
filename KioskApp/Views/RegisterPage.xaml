@@ -1,12 +1,34 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="KioskApp.Views.RegisterPage"
-             Title="Register">
-    <StackLayout Padding="20">
-        <Entry Placeholder="Username" Text="{Binding Username}" />
-        <Entry Placeholder="Password" Text="{Binding Password}" IsPassword="True" />
-        <Button Text="Register" Command="{Binding RegisterCommand}" />
-        <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding IsErrorVisible}" />
+             x:Class="KioskApp.Views.RegisterPage">
+
+    <StackLayout Padding="10">
+        <Entry Text="{Binding Email}" x:Name="emailEntry" Placeholder="Email" Keyboard="Email" />
+        <Entry Text="{Binding Password}" x:Name="passwordEntry" Placeholder="Password" IsPassword="True" />
+        <CheckBox x:Name="showPasswordCheckBox" CheckedChanged="OnShowPasswordCheckedChanged" />
+        <Entry Text="{Binding FirstName}" x:Name="firstNameEntry" Placeholder="First Name" />
+        <Entry Text="{Binding LastName}" x:Name="lastNameEntry" Placeholder="Last Name" />
+        <Picker SelectedItem="{Binding Building}" x:Name="buildingPicker" Title="Select Building">
+            <Picker.ItemsSource>
+                <x:Array Type="{x:Type x:String}">
+                    <x:String>thelet</x:String>
+                    <x:String>paz</x:String>
+                    <x:String>degel</x:String>
+                    <x:String>lavan</x:String>
+                </x:Array>
+            </Picker.ItemsSource>
+        </Picker>
+        <Entry Text="{Binding RoomNumber}" x:Name="roomNumberEntry" Placeholder="Room Number" />
+        <Picker SelectedItem="{Binding Language}" x:Name="languagePicker" Title="Select Language">
+            <Picker.ItemsSource>
+                <x:Array Type="{x:Type x:String}">
+                    <x:String>English</x:String>
+                    <x:String>Russian</x:String>
+                    <x:String>Hebrew</x:String>
+                </x:Array>
+            </Picker.ItemsSource>
+        </Picker>
+        <Button Text="Register" Clicked="OnRegisterClicked" />
     </StackLayout>
 </ContentPage>

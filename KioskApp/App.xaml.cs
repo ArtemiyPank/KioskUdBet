@@ -50,7 +50,7 @@ namespace KioskApp
                     {
                         userService.SetCurrentUser(user);
                         MessagingCenter.Send(this, "UpdateUserState");
-                        Debug.WriteLine($"Token validated. Current User: {user.Username}");
+                        Debug.WriteLine($"Token validated. Current User: {user.Email}");
                     }
                     else
                     {

@@ -16,7 +16,7 @@ namespace KioskApp.Services
             if (registeredUser != null)
             {
                 _currentUser = registeredUser;
-                Debug.WriteLine($"Registered User in UserService: {registeredUser.Username}");
+                Debug.WriteLine($"Registered User in UserService: {registeredUser.Email}");
             }
             else
             {
@@ -31,7 +31,7 @@ namespace KioskApp.Services
             if (user != null)
             {
                 _currentUser = user;
-                Debug.WriteLine($"Authenticated User in UserService: {user.Username}");
+                Debug.WriteLine($"Authenticated User in UserService: {user.Email}");
 
             }
             else
@@ -48,7 +48,7 @@ namespace KioskApp.Services
             if (user != null)
             {
                 _currentUser = user;
-                Debug.WriteLine($"Authenticated User with token in UserService: {user.Username}");
+                Debug.WriteLine($"Authenticated User with token in UserService: {user.Email}");
             }
             else
             {
@@ -71,7 +71,7 @@ namespace KioskApp.Services
         public void SetCurrentUser(User user)
         {
             _currentUser = user;
-            Debug.WriteLine($"Set Current User in UserService: {_currentUser?.Username}");
+            Debug.WriteLine($"Set Current User in UserService: {_currentUser?.Email}");
         }
 
         public async Task ClearCurrentUserAsync()

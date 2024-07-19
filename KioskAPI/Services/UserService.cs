@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace KioskAPI.Services
@@ -20,33 +21,20 @@ namespace KioskAPI.Services
             _context = context;
         }
 
-        public async Task<User> Authenticate(string username, string password)
+
+        public async Task<User> Authenticate(string email, string password)
         {
             // Ищем пользователя по username и password
-            return await _context.Users.SingleOrDefaultAsync(x => x.Username == username && x.Password == password);
+            return await _context.Users.SingleOrDefaultAsync(x => x.Email == email && x.Password == password);
         }
+
 
         public async Task<User> GetUserByToken(string token)
         {
-            if (string.IsNullOrEmpty(token))
-            {
-                _logger.LogWarning("Token is null or empty");
-                return null;
-            }
+            _logger.LogInformation("I am in GetUserByToken!");
 
-            _logger.LogInformation("Processing token");
-
-            JwtSecurityToken jwtToken;
-            try
-            {
-                var handler = new JwtSecurityTokenHandler();
-                jwtToken = handler.ReadToken(token) as JwtSecurityToken;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to read token");
-                return null;
-            }
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
 
             if (jwtToken == null)
             {
@@ -54,27 +42,29 @@ namespace KioskAPI.Services
                 return null;
             }
 
-            var username = jwtToken.Claims.FirstOrDefault(claim => claim.Type == JwtRegisteredClaimNames.UniqueName)?.Value;
-
-            if (string.IsNullOrEmpty(username))
+            foreach (var claim in jwtToken.Claims)
             {
-                _logger.LogWarning("Username not found in token");
+                _logger.LogInformation($"Claim type: {claim.Type}, value: {claim.Value}");
+            }
+
+            var email = jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (email == null)
+            {
+                email = jwtToken.Claims.FirstOrDefault(claim => claim.Type == JwtRegisteredClaimNames.Email)?.Value;
+            }
+
+            if (email == null)
+            {
+                _logger.LogWarning("Email not found in token");
                 return null;
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            _logger.LogInformation($"email: {email}");
 
-            if (user == null)
-            {
-                _logger.LogWarning("User not found with username: {Username}", username);
-            }
-            else
-            {
-                _logger.LogInformation("User authenticated: {Username}", user.Username);
-            }
-
-            return user;
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
+
+
 
 
 
@@ -84,6 +74,13 @@ namespace KioskAPI.Services
             await _context.SaveChangesAsync();
             return user;
         }
+
+
+        public async Task<bool> EmailExists(string email)
+        {
+            return await _context.Users.AnyAsync(u => u.Email == email);
+        }
+
 
         public async Task<List<User>> GetAllUsers()
         {
