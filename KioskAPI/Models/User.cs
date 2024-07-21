@@ -12,6 +12,7 @@
         public string Building { get; set; } // "Paz" / "Degel" / "Lavan / "Thelet"
         public string RoomNumber { get; set; }
         public string Role { get; set; } = "User"; // "User" / "Admin" / "SuperAdmin"
+        public RefreshToken RefreshToken { get; set; }
 
         public override string ToString()
         {

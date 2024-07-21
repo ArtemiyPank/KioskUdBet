@@ -45,7 +45,7 @@ namespace KioskApp
                 if (!string.IsNullOrEmpty(token))
                 {
                     var userService = DependencyService.Get<IUserService>();
-                    var user = await userService.AuthenticateWithToken(token);
+                    var user = await userService.AuthenticateWithToken();
                     if (user != null)
                     {
                         userService.SetCurrentUser(user);

@@ -10,6 +10,12 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace KioskAPI.Controllers
 {
+    public class RefreshTokenRequest
+    {
+        public string Token { get; set; }
+        public string RefreshToken { get; set; }
+    }
+
     public class AuthenticateRequest
     {
         public string Email { get; set; }
@@ -28,8 +34,6 @@ namespace KioskAPI.Controllers
         public string Role { get; set; }
     }
 
-
-
     public class RegistrateRequest
     {
         public int Id { get; set; }
@@ -43,22 +47,24 @@ namespace KioskAPI.Controllers
         public string Role { get; set; } = "User";
     }
 
-
-        [ApiController]
+    [ApiController]
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<UsersController> _logger;
+        private readonly ITokenService _tokenService;
 
-        public UsersController(IUserService userService, IConfiguration configuration, ILogger<UsersController> logger)
+        public UsersController(IUserService userService, ITokenService tokenService, IConfiguration configuration, ILogger<UsersController> logger)
         {
             _userService = userService;
+            _tokenService = tokenService;
             _configuration = configuration;
             _logger = logger;
         }
 
+        // Register a new user
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegistrateRequest request)
         {
@@ -71,7 +77,7 @@ namespace KioskAPI.Controllers
             {
                 Id = request.Id,
                 Email = request.Email,
-                Salt = BCrypt.Net.BCrypt.GenerateSalt(), // генерация соли
+                Salt = BCrypt.Net.BCrypt.GenerateSalt(), // Generate salt
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Language = request.Language,
@@ -79,11 +85,14 @@ namespace KioskAPI.Controllers
                 RoomNumber = request.RoomNumber,
             };
 
-            // Хеширование пароля с солью
+            // Hash the password with the salt
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password + user.Salt);
 
             var newUser = await _userService.Register(user);
-            var token = GenerateJwtToken(newUser);
+
+            var token = _tokenService.GenerateAccessToken(newUser);
+            var refreshToken = _tokenService.GenerateRefreshToken(newUser);
+            await _userService.SaveRefreshToken(refreshToken);
 
             var userResponse = new UserResponse
             {
@@ -97,20 +106,23 @@ namespace KioskAPI.Controllers
                 Role = newUser.Role
             };
 
-            return Ok(new { user = userResponse, token });
+            return Ok(new { user = userResponse, token, refreshToken = refreshToken.Token });
         }
 
+        // Authenticate a user with email and password
         [HttpPost("authenticate")]
         public async Task<IActionResult> Authenticate([FromBody] AuthenticateRequest request)
         {
             var user = await _userService.GetUserByEmail(request.Email);
             if (user == null) return Unauthorized();
 
-            // Проверка пароля
+            // Verify the password
             var isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password + user.Salt, user.PasswordHash);
             if (!isPasswordValid) return Unauthorized();
 
-            var token = GenerateJwtToken(user);
+            var token = _tokenService.GenerateAccessToken(user);
+            var refreshToken = _tokenService.GenerateRefreshToken(user);
+            await _userService.SaveRefreshToken(refreshToken);
 
             var userResponse = new UserResponse
             {
@@ -124,28 +136,34 @@ namespace KioskAPI.Controllers
                 Role = user.Role
             };
 
-            return Ok(new { user = userResponse, token });
+            return Ok(new { user = userResponse, token, refreshToken = refreshToken.Token });
         }
 
-        [HttpGet("authenticateWithToken")]
+        // Authenticate a user with a refresh token
+        [HttpPost("authenticateWithToken")]
         public async Task<IActionResult> AuthenticateWithToken()
         {
             _logger.LogInformation("Received request for token authentication");
             try
             {
-                var authHeader = Request.Headers["Authorization"].ToString();
-                _logger.LogInformation($"Authorization header: {authHeader}");
-
-                var token = authHeader.Replace("Bearer ", "");
-                _logger.LogInformation($"Token: {token}");
-
-                var user = await _userService.GetUserByToken(token);
-
-                if (user == null)
+                // Get the refresh token from the header
+                var refreshToken = Request.Headers["Refresh-Token"].ToString();
+                if (string.IsNullOrEmpty(refreshToken))
                 {
-                    _logger.LogWarning("User not found for the provided token");
+                    _logger.LogWarning("Refresh token not provided in headers");
+                    return BadRequest("Refresh token not provided");
+                }
+
+                // Authenticate with the refresh token
+                var response = await _userService.AuthenticateWithRefreshToken(refreshToken);
+
+                if (response == null)
+                {
+                    _logger.LogWarning("User not found for the provided refresh token");
                     return Unauthorized();
                 }
+
+                var (user, newJwtToken, newRefreshToken) = response.Value;
 
                 var userResponse = new UserResponse
                 {
@@ -160,7 +178,7 @@ namespace KioskAPI.Controllers
                 };
 
                 _logger.LogInformation($"User {user.Email} authenticated successfully");
-                return Ok(new { user = userResponse });
+                return Ok(new { user = userResponse, token = newJwtToken, refreshToken = newRefreshToken });
             }
             catch (Exception ex)
             {
@@ -169,6 +187,26 @@ namespace KioskAPI.Controllers
             }
         }
 
+        // Refresh access and refresh tokens
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+        {
+            var principal = _tokenService.GetPrincipalFromExpiredToken(request.Token);
+            var email = principal.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Email)?.Value;
+            var user = await _userService.GetUserByEmail(email);
+
+            if (user == null || !await _userService.ValidateRefreshToken(user, request.RefreshToken))
+                return Unauthorized();
+
+            var newJwtToken = _tokenService.GenerateAccessToken(user);
+            var newRefreshToken = _tokenService.GenerateRefreshToken(user);
+            await _userService.RevokeRefreshToken(user, request.RefreshToken);
+            await _userService.SaveRefreshToken(newRefreshToken);
+
+            return Ok(new { token = newJwtToken, refreshToken = newRefreshToken.Token });
+        }
+
+        // Generate a JWT token
         private string GenerateJwtToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();

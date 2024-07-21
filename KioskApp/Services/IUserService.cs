@@ -6,9 +6,9 @@ namespace KioskApp.Services
 {
     public interface IUserService
     {
-        Task<(User, string)> Authenticate(string username, string password);
-        Task<(User, string)> Register(User user);
-        Task<User> AuthenticateWithToken(string token);
+        Task<User> Register(User user);
+        Task<User> Authenticate(string username, string password);
+        Task<User> AuthenticateWithToken();
         Task<List<User>> GetAllUsers();
         User GetCurrentUser();
         void SetCurrentUser(User user);

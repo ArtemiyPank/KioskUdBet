@@ -128,12 +128,11 @@ namespace KioskApp.ViewModels
             }
 
 
-            var (registeredUser, token) = await _userService.Register(user);
+            var registeredUser = await _userService.Register(user);
             Debug.WriteLine($"registeredUser: {registeredUser}");
             if (registeredUser != null)
             {
-                _userService.SetCurrentUser(registeredUser);
-                await SecureStorage.SetAsync("auth_token", token); // Сохранение токена
+
                 Debug.WriteLine($"Registered User in RegisterViewModel: {registeredUser.Email}");
                 await Shell.Current.GoToAsync(".."); // Переход на предыдущую страницу, ProfilePage должна быть предшествующей страницей
                 MessagingCenter.Send(this, "UpdateUserState");

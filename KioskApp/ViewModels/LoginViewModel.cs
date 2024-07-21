@@ -31,13 +31,12 @@ namespace KioskApp.ViewModels
                 return false;
             }
 
-            var (user, token) = await _userService.Authenticate(Email, Password);
+            var user = await _userService.Authenticate(Email, Password);
             if (user != null)
             {
-                _userService.SetCurrentUser(user);
-                await SecureStorage.SetAsync("auth_token", token); // Сохранение токена
                 Debug.WriteLine($"Authenticated User in LoginViewModel: {user.Email}");
                 await Shell.Current.GoToAsync(".."); // Переход на предыдущую страницу(ProfilePage)
+                
                 MessagingCenter.Send(this, "UpdateUserState");
 
                 return true;
