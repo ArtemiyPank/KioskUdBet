@@ -47,6 +47,13 @@ namespace KioskAPI.Controllers
         public string Role { get; set; } = "User";
     }
 
+    public class ApiResponse
+    {
+        public bool IsSuccess { get; set; }
+        public string Message { get; set; }
+        public object Data { get; set; }
+    }
+
     [ApiController]
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
@@ -68,9 +75,16 @@ namespace KioskAPI.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegistrateRequest request)
         {
+            _logger.LogInformation($"request.Email - {request.Email}");
+            _logger.LogInformation($"(await _userService.EmailExists(request.Email) - {await _userService.EmailExists(request.Email)}");
+
             if (await _userService.EmailExists(request.Email))
             {
-                return BadRequest("Email already exists.");
+                return BadRequest(new ApiResponse
+                {
+                    IsSuccess = false,
+                    Message = "Email already exists."
+                });
             }
 
             var user = new User
@@ -106,7 +120,15 @@ namespace KioskAPI.Controllers
                 Role = newUser.Role
             };
 
-            return Ok(new { user = userResponse, token, refreshToken = refreshToken.Token });
+            Response.Headers.Add("Access-Token", token);
+            Response.Headers.Add("Refresh-Token", refreshToken.Token);
+
+            return Ok(new ApiResponse
+            {
+                IsSuccess = true,
+                Message = "Registration successful",
+                Data = userResponse
+            });
         }
 
         // Authenticate a user with email and password
@@ -114,11 +136,19 @@ namespace KioskAPI.Controllers
         public async Task<IActionResult> Authenticate([FromBody] AuthenticateRequest request)
         {
             var user = await _userService.GetUserByEmail(request.Email);
-            if (user == null) return Unauthorized();
+            if (user == null) return Unauthorized(new ApiResponse
+            {
+                IsSuccess = false,
+                Message = "Invalid email or password."
+            });
 
             // Verify the password
             var isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password + user.Salt, user.PasswordHash);
-            if (!isPasswordValid) return Unauthorized();
+            if (!isPasswordValid) return Unauthorized(new ApiResponse
+            {
+                IsSuccess = false,
+                Message = "Invalid email or password."
+            });
 
             var token = _tokenService.GenerateAccessToken(user);
             var refreshToken = _tokenService.GenerateRefreshToken(user);
@@ -136,7 +166,15 @@ namespace KioskAPI.Controllers
                 Role = user.Role
             };
 
-            return Ok(new { user = userResponse, token, refreshToken = refreshToken.Token });
+            Response.Headers.Add("Access-Token", token);
+            Response.Headers.Add("Refresh-Token", refreshToken.Token);
+
+            return Ok(new ApiResponse
+            {
+                IsSuccess = true,
+                Message = "Authentication successful",
+                Data = userResponse
+            });
         }
 
         // Authenticate a user with a refresh token
@@ -151,7 +189,11 @@ namespace KioskAPI.Controllers
                 if (string.IsNullOrEmpty(refreshToken))
                 {
                     _logger.LogWarning("Refresh token not provided in headers");
-                    return BadRequest("Refresh token not provided");
+                    return BadRequest(new ApiResponse
+                    {
+                        IsSuccess = false,
+                        Message = "Refresh token not provided"
+                    });
                 }
 
                 // Authenticate with the refresh token
@@ -160,7 +202,11 @@ namespace KioskAPI.Controllers
                 if (response == null)
                 {
                     _logger.LogWarning("User not found for the provided refresh token");
-                    return Unauthorized();
+                    return Unauthorized(new ApiResponse
+                    {
+                        IsSuccess = false,
+                        Message = "Invalid refresh token"
+                    });
                 }
 
                 var (user, newJwtToken, newRefreshToken) = response.Value;
@@ -177,13 +223,25 @@ namespace KioskAPI.Controllers
                     Role = user.Role
                 };
 
+                Response.Headers.Add("Access-Token", newJwtToken);
+                Response.Headers.Add("Refresh-Token", newRefreshToken);
+
                 _logger.LogInformation($"User {user.Email} authenticated successfully");
-                return Ok(new { user = userResponse, token = newJwtToken, refreshToken = newRefreshToken });
+                return Ok(new ApiResponse
+                {
+                    IsSuccess = true,
+                    Message = "Token authentication successful",
+                    Data = userResponse
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in AuthenticateWithToken method");
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, new ApiResponse
+                {
+                    IsSuccess = false,
+                    Message = "Internal server error"
+                });
             }
         }
 
@@ -196,14 +254,26 @@ namespace KioskAPI.Controllers
             var user = await _userService.GetUserByEmail(email);
 
             if (user == null || !await _userService.ValidateRefreshToken(user, request.RefreshToken))
-                return Unauthorized();
+                return Unauthorized(new ApiResponse
+                {
+                    IsSuccess = false,
+                    Message = "Invalid refresh token"
+                });
 
             var newJwtToken = _tokenService.GenerateAccessToken(user);
             var newRefreshToken = _tokenService.GenerateRefreshToken(user);
             await _userService.RevokeRefreshToken(user, request.RefreshToken);
             await _userService.SaveRefreshToken(newRefreshToken);
 
-            return Ok(new { token = newJwtToken, refreshToken = newRefreshToken.Token });
+            Response.Headers.Add("Access-Token", newJwtToken);
+            Response.Headers.Add("Refresh-Token", newRefreshToken.Token);
+
+            return Ok(new ApiResponse
+            {
+                IsSuccess = true,
+                Message = "Token refreshed successfully",
+                Data = user
+            });
         }
 
         // Generate a JWT token
@@ -215,7 +285,7 @@ namespace KioskAPI.Controllers
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                    new Claim(JwtRegisteredClaimNames.Email, user.Id.ToString()),
                     new Claim(ClaimTypes.Role, user.Role)
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),

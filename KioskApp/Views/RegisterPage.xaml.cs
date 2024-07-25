@@ -25,11 +25,10 @@ namespace KioskApp.Views
                 if (result)
                 {
                     await DisplayAlert("Success", "Registration successful", "OK");
-                    // Navigate to login page or other appropriate action
                 }
                 else
                 {
-                    await DisplayAlert("Error", "Registration failed", "OK");
+                    await DisplayAlert("Error", viewModel.ErrorMessage, "OK");
                 }
             }
         }

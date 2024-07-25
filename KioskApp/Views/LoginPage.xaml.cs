@@ -29,7 +29,7 @@ namespace KioskApp.Views
                 }
                 else
                 {
-                    await DisplayAlert("Error", "Login failed", "OK");
+                    await DisplayAlert("Error", viewModel.ErrorMessage, "OK");
                 }
             }
         }

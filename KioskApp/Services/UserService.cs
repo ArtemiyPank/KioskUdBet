@@ -1,8 +1,8 @@
 ﻿using KioskApp.Models;
+using Microsoft.Maui.ApplicationModel.Communication;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Microsoft.Maui.Storage;
 
 namespace KioskApp.Services
 {
@@ -12,77 +12,89 @@ namespace KioskApp.Services
         private string _accessToken;
         private string _refreshToken;
 
-        // Register a new user and store the tokens
-        public async Task<User> Register(User user)
+        public async Task<ApiResponse> Register(User user)
         {
-            var (registeredUser, token, refreshToken) = await DependencyService.Get<IApiService>().RegisterUser(user);
-            if (registeredUser != null)
+            var response = await DependencyService.Get<IApiService>().RegisterUser(user);
+            if (response.IsSuccess)
             {
-                await SetCurrentUserAndTokens(registeredUser, token, refreshToken);
-                Debug.WriteLine($"Registered User in UserService: {registeredUser.Email}");
+                await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
+                Debug.WriteLine($"Registered User in UserService: {response.User.Email}");
             }
             else
             {
-                Debug.WriteLine("Registration failed in UserService.");
+                Debug.WriteLine($"Registration failed in UserService: {response.Message}");
             }
-            return registeredUser;
+
+            ApiResponse completeResponse = new ApiResponse()
+            {
+                IsSuccess = response.IsSuccess,
+                Message = response.Message,
+                Data = response.User
+            };
+
+            return completeResponse;
         }
 
-        // Authenticate a user using email and password, and store the tokens
-        public async Task<User> Authenticate(string email, string password)
+        public async Task<ApiResponse> Authenticate(string email, string password)
         {
-            var (user, token, refreshToken) = await DependencyService.Get<IApiService>().AuthenticateUser(email, password);
-            if (user != null)
+            var response = await DependencyService.Get<IApiService>().AuthenticateUser(email, password);
+            if (response.IsSuccess)
             {
-                await SetCurrentUserAndTokens(user, token, refreshToken);
-                Debug.WriteLine($"Authenticated User in UserService: {user.Email}");
+                await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
+                Debug.WriteLine($"Authenticated User in UserService: {response.User.Email}");
             }
             else
             {
-                Debug.WriteLine("Authentication failed in UserService.");
+                Debug.WriteLine($"Authentication failed in UserService: {response.Message}");
             }
-            return user;
+
+            ApiResponse completeResponse = new ApiResponse()
+            {
+                IsSuccess = response.IsSuccess,
+                Message = response.Message,
+                Data = response.User
+            };
+            return completeResponse;
         }
 
-        // Authenticate a user using a refresh token
         public async Task<User> AuthenticateWithToken()
         {
             var refreshToken = await SecureStorage.GetAsync("refresh_token");
 
-            var (user, newAccessToken, newRefreshToken) = await DependencyService.Get<IApiService>().AuthenticateWithToken(refreshToken);
+            var response = await DependencyService.Get<IApiService>().AuthenticateWithToken(refreshToken);
 
-            if (user != null)
+            if (response.IsSuccess)
             {
-                await SetCurrentUserAndTokens(user, newAccessToken, newRefreshToken);
-                Debug.WriteLine($"Authenticated User with token in UserService: {user.Email}");
+                await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
+                Debug.WriteLine($"Authenticated User with token in UserService: {response.User.Email}");
             }
             else
             {
-                Debug.WriteLine("Token authentication failed in UserService.");
+                Debug.WriteLine($"Token authentication failed in UserService: {response.Message}");
             }
-            return user;
+
+
+            // !!! it is necessary to register the logic of logging out of the account and error output
+            return response.User;
         }
 
-        // Get the current authenticated user
         public User GetCurrentUser()
         {
             return _currentUser;
         }
 
-        // Temporarily return an empty list of users
         public async Task<List<User>> GetAllUsers()
         {
+            // Temporarily return an empty list
             return new List<User>();
         }
 
-        // Set the current user
         public void SetCurrentUser(User user)
         {
             _currentUser = user;
             Debug.WriteLine($"Set Current User in UserService: {_currentUser?.Email}");
         }
 
-        // Clear the current user and tokens
         public async Task ClearCurrentUserAsync()
         {
             _currentUser = null;
@@ -94,15 +106,14 @@ namespace KioskApp.Services
             Debug.WriteLine("User has been logged out and tokens removed.");
         }
 
-        // Helper method to set the current user and store tokens
-        private async Task SetCurrentUserAndTokens(User user, string accessToken, string refreshToken)
+        private async Task SetCurrentUserAsync(User user, string accessToken, string refreshToken)
         {
             _currentUser = user;
             _accessToken = accessToken;
             _refreshToken = refreshToken;
 
-            await SecureStorage.SetAsync("auth_token", accessToken); // Store the access token
-            await SecureStorage.SetAsync("refresh_token", refreshToken); // Store the refresh token
+            await SecureStorage.SetAsync("auth_token", accessToken); // Store the new access token
+            await SecureStorage.SetAsync("refresh_token", refreshToken); // Store the new refresh token
         }
     }
 }

@@ -1,15 +1,16 @@
 ﻿using KioskApp.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace KioskApp.Services
 {
     public interface IApiService
     {
-        Task<(User, string, string)> RegisterUser(User user);
-        Task<(User, string, string)> AuthenticateUser(string email, string password);
-        Task<(User, string, string)> AuthenticateWithToken(string refreshToken);
+        Task<AuthResponse> RegisterUser(User user);
+        Task<AuthResponse> AuthenticateUser(string email, string password);
+        Task<AuthResponse> AuthenticateWithToken(string refreshToken);
+        void ClearAuthorizationHeader();
         Task<List<Product>> GetProducts();
         Task<Order> PlaceOrder(Order order);
-        Task UpdateUser(User user);
-        void ClearAuthorizationHeader();
     }
 }

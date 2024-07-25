@@ -30,5 +30,8 @@
             </Picker.ItemsSource>
         </Picker>
         <Button Text="Register" Clicked="OnRegisterClicked" />
+
+        <!-- Error Message Label -->
+        <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBooleanConverter}}" />
     </StackLayout>
 </ContentPage>
