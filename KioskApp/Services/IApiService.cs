@@ -11,6 +11,7 @@ namespace KioskApp.Services
         Task<AuthResponse> AuthenticateWithToken(string refreshToken);
         void ClearAuthorizationHeader();
         Task<List<Product>> GetProducts();
+        Task<Product> AddProduct(Product product, Stream imageStream, string imageName);
         Task<Order> PlaceOrder(Order order);
     }
 }

@@ -18,11 +18,8 @@ namespace KioskApp
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
-
-            // Register services
-            builder.Services.AddSingleton<IApiService, ApiService>();
+            // Register other services
             builder.Services.AddSingleton<IUserService, UserService>();
-            builder.Services.AddHttpClient<ApiService>();
 
             // Register view models
             builder.Services.AddTransient<ProfileViewModel>();
@@ -37,7 +34,6 @@ namespace KioskApp
             builder.Services.AddTransient<RegisterPage>();
             builder.Services.AddTransient<ProductsPage>();
             builder.Services.AddTransient<CartPage>();
-
 
 #if DEBUG
             builder.Logging.AddDebug();

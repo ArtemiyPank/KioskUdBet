@@ -14,7 +14,7 @@ namespace KioskApp.Views
         public ProductsPage()
         {
             InitializeComponent();
-            BindingContext = new ProductsViewModel(DependencyService.Get<IApiService>());
+            BindingContext = new ProductsViewModel();
         }
     }
 }

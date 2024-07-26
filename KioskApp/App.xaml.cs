@@ -1,5 +1,4 @@
 ﻿using KioskApp.Services;
-using KioskApp.ViewModels;
 using Microsoft.Maui.Controls;
 using System;
 using System.Diagnostics;
@@ -24,7 +23,6 @@ namespace KioskApp
                 BaseAddress = new Uri("https://10.0.2.2:7074") // Для Android эмулятора
             };
 
-
             var apiService = new ApiService(httpClient);
 
             DependencyService.RegisterSingleton<IApiService>(apiService);
@@ -45,6 +43,12 @@ namespace KioskApp
                 if (!string.IsNullOrEmpty(token))
                 {
                     var userService = DependencyService.Get<IUserService>();
+                    if (userService == null)
+                    {
+                        Debug.WriteLine("userService is null");
+                        return;
+                    }
+
                     var user = await userService.AuthenticateWithToken();
                     if (user != null)
                     {
