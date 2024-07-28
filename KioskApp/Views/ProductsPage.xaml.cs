@@ -10,11 +10,5 @@ namespace KioskApp.Views
             InitializeComponent();
             BindingContext = viewModel;
         }
-
-        public ProductsPage()
-        {
-            InitializeComponent();
-            BindingContext = new ProductsViewModel();
-        }
     }
 }

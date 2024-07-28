@@ -31,7 +31,7 @@ namespace KioskAPI.Controllers
         }
 
         [HttpPost("addProduct")]
-        public async Task<ActionResult<Product>> AddProduct([FromForm] Product product, IFormFile image)
+        public async Task<IActionResult> AddProduct([FromForm] Product product, IFormFile image)
         {
             try
             {
@@ -40,27 +40,32 @@ namespace KioskAPI.Controllers
                 _logger.LogInformation($"Product description: {product.Description}");
                 _logger.LogInformation($"Product price: {product.Price}");
                 _logger.LogInformation($"Product stock: {product.Stock}");
+                _logger.LogInformation($"Product category: {product.Category}");
+                _logger.LogInformation($"Product last updated: {product.LastUpdated}");
+
+                // Сохраняем продукт сначала, чтобы получить его ID
+                var newProduct = await _productService.AddProduct(product);
 
                 if (image != null && image.Length > 0)
                 {
                     _logger.LogInformation($"Received image with length: {image.Length}");
-                    var imagePath = Path.Combine("wwwroot/images", image.FileName);
+
+                    // Генерируем новое имя файла
+                    var newFileName = $"{newProduct.Name}_{newProduct.Category}_{newProduct.Id}.jpg";
+                    var imagePath = Path.Combine("wwwroot/images", newFileName);
+
                     using (var stream = new FileStream(imagePath, FileMode.Create))
                     {
                         _logger.LogInformation("Starting to copy image to file stream.");
                         await image.CopyToAsync(stream);
                         _logger.LogInformation("Finished copying image to file stream.");
                     }
-                    product.ImageUrl = $"/images/{image.FileName}";
+                    newProduct.ImageUrl = $"/images/{newFileName}";
+
+                    // Обновляем продукт с новым URL изображения
+                    await _productService.UpdateProduct(newProduct.Id, newProduct);
                 }
 
-                if (string.IsNullOrEmpty(product.ImageUrl))
-                {
-                    _logger.LogError("The ImageUrl field is required.");
-                    return BadRequest(new { errors = new { ImageUrl = new[] { "The ImageUrl field is required." } } });
-                }
-
-                var newProduct = await _productService.AddProduct(product);
                 return Ok(newProduct);
             }
             catch (Exception ex)
@@ -69,6 +74,29 @@ namespace KioskAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error adding product");
             }
         }
+
+
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateProduct(int id, [FromForm] Product product, IFormFile image)
+        {
+            product.LastUpdated = DateTime.UtcNow; // Устанавливаем дату последнего обновления
+
+            if (image != null && image.Length > 0)
+            {
+                var imagePath = Path.Combine("wwwroot/images", image.FileName);
+                using (var stream = new FileStream(imagePath, FileMode.Create))
+                {
+                    await image.CopyToAsync(stream);
+                }
+                product.ImageUrl = $"/images/{image.FileName}";
+            }
+
+            var updatedProduct = await _productService.UpdateProduct(id, product);
+            return Ok(updatedProduct);
+        }
+
+
 
     }
 }

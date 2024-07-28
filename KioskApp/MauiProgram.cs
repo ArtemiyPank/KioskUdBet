@@ -20,6 +20,7 @@ namespace KioskApp
 
             // Register other services
             builder.Services.AddSingleton<IUserService, UserService>();
+            builder.Services.AddSingleton<CacheService>();
 
             // Register view models
             builder.Services.AddTransient<ProfileViewModel>();

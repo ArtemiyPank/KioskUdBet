@@ -5,25 +5,33 @@
              x:Class="KioskApp.Views.ProductsPage"
              Title="Products">
 
-    <StackLayout>
-        <Entry Placeholder="Name" Text="{Binding NewProduct.Name}"/>
-        <Entry Placeholder="Description" Text="{Binding NewProduct.Description}" />
-        <Entry Placeholder="Price" Text="{Binding NewProduct.Price}" Keyboard="Numeric" />
-        <Entry Placeholder="Stock" Text="{Binding NewProduct.Stock}" Keyboard="Numeric" />
-        <Button Text="Choose Image" Command="{Binding ChooseImageCommand}" />
-        <Button Text="Add Product" Command="{Binding AddProductCommand}" />
-        <CollectionView ItemsSource="{Binding Products}">
-            <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <StackLayout>
-                        <Image Source="{Binding ImageUrl}" HeightRequest="100" />
-                        <Label Text="{Binding Name}" />
-                        <Label Text="{Binding Description}" />
-                        <Label Text="{Binding Price, StringFormat='{}{0:C}'}" />
-                        <Button Text="Add to Cart" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProductsViewModel}}, Path=AddToCartCommand}" CommandParameter="{Binding .}" />
-                    </StackLayout>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
-    </StackLayout>
+    <ScrollView>
+        <StackLayout>
+            <Entry Placeholder="Name" Text="{Binding NewProduct.Name}"/>
+            <Entry Placeholder="Description" Text="{Binding NewProduct.Description}" />
+            <Entry Placeholder="Category" Text="{Binding NewProduct.Category}" />
+            <Entry Placeholder="Price" Text="{Binding NewProduct.Price}" Keyboard="Numeric" />
+            <Entry Placeholder="Stock" Text="{Binding NewProduct.Stock}" Keyboard="Numeric" />
+            <Button Text="Choose Image" Command="{Binding ChooseImageCommand}" />
+            <Button Text="Add Product" Command="{Binding AddProductCommand}" />
+
+            <CollectionView ItemsSource="{Binding Products}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame BorderColor="LightGray" Padding="10" Margin="5">
+                            <StackLayout>
+                                <Image Source="{Binding ImageUrl}" HeightRequest="100" />
+                                <Label Text="{Binding Name, StringFormat='Name: {0}'}" FontAttributes="Bold" />
+                                <Label Text="{Binding Description, StringFormat='Description: {0}'}" />
+                                <Label Text="{Binding Price, StringFormat='Price: {0:C}'}" />
+                                <Label Text="{Binding Stock, StringFormat='Stock: {0}'}" />
+                                <Button Text="Add to Cart" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProductsViewModel}}, Path=AddToCartCommand}" CommandParameter="{Binding .}" />
+                            </StackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </StackLayout>
+    </ScrollView>
+
 </ContentPage>

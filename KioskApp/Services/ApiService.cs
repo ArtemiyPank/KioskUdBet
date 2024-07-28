@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Globalization;
+using System.Text;
 
 namespace KioskApp.Services
 {
@@ -240,7 +241,10 @@ namespace KioskApp.Services
 
         public async Task<List<Product>> GetProducts()
         {
-            return await _httpClient.GetFromJsonAsync<List<Product>>("api/products/getProducts");
+            Debug.WriteLine($"СССССССССССУУУУУУУУУУУУУККККККККККККККККААААААААААААААААААА");
+            var a = await _httpClient.GetFromJsonAsync<List<Product>>("api/products/getProducts");
+            Debug.WriteLine($"БЛЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯ");
+            return a;
         }
 
         public async Task<Product> AddProduct(Product product, Stream imageStream, string imageName)
@@ -248,12 +252,14 @@ namespace KioskApp.Services
             try
             {
                 var content = new MultipartFormDataContent
-                {
-                    { new StringContent(product.Name ?? string.Empty), "Name" },
-                    { new StringContent(product.Description ?? string.Empty), "Description" },
-                    { new StringContent(product.Price.ToString("0,00", new CultureInfo("ru-RU"))), "Price" },
-                    { new StringContent(product.Stock.ToString("0", CultureInfo.InvariantCulture)), "Stock" }
-                };
+        {
+            { new StringContent(product.Name ?? string.Empty), "Name" },
+            { new StringContent(product.Description ?? string.Empty), "Description" },
+            { new StringContent(product.Price.ToString("0,00", new CultureInfo("ru-RU"))), "Price" },
+            { new StringContent(product.Stock.ToString(CultureInfo.InvariantCulture)), "Stock" },
+            { new StringContent(product.Category ?? string.Empty), "Category" }, // Добавляем поле Category
+            { new StringContent(product.LastUpdated.ToString("o")), "LastUpdated" } // Преобразование даты в строку в формате ISO 8601
+        };
 
                 if (imageStream != null)
                 {
@@ -307,10 +313,10 @@ namespace KioskApp.Services
 
 
 
-
-
-
-
+        public async Task<Stream> DownloadProductImage(string imageUrl)
+        {
+            return await _httpClient.GetStreamAsync(imageUrl);
+        }
 
 
         // Place an order on the server
