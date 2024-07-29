@@ -8,11 +8,11 @@ namespace KioskApp.ViewModels
 {
     public class CartViewModel : BaseViewModel
     {
-        private readonly IApiService _apiService;
+        private readonly IProductApiService _productApiService;
 
-        public CartViewModel(IApiService apiService)
+        public CartViewModel()
         {
-            _apiService = apiService;
+            _productApiService = DependencyService.Get<IProductApiService>();
             PlaceOrderCommand = new Command(OnPlaceOrder);
         }
 
@@ -30,7 +30,7 @@ namespace KioskApp.ViewModels
                 DeliveryLocation = DeliveryLocation
             };
 
-            await _apiService.PlaceOrder(order);
+            await _productApiService.PlaceOrder(order);
             // Handle successful order placement
         }
     }

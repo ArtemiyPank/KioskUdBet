@@ -10,12 +10,12 @@ namespace KioskApp.ViewModels
 {
     public class RegisterViewModel : BaseViewModel
     {
-        private readonly IApiService _apiService;
+        private readonly IUserApiService _apiService;
         private readonly IUserService _userService;
 
         public RegisterViewModel()
         {
-            _apiService = DependencyService.Get<IApiService>();
+            _apiService = DependencyService.Get<IUserApiService>();
             _userService = DependencyService.Get<IUserService>();
         }
 

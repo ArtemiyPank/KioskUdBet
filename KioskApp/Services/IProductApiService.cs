@@ -4,15 +4,19 @@ using System.Threading.Tasks;
 
 namespace KioskApp.Services
 {
-    public interface IApiService
+    internal interface IProductApiService
     {
-        Task<AuthResponse> RegisterUser(User user);
-        Task<AuthResponse> AuthenticateUser(string email, string password);
-        Task<AuthResponse> AuthenticateWithToken(string refreshToken);
-        void ClearAuthorizationHeader();
+        
         Task<Stream> DownloadProductImage(string imageUrl);
+
         Task<List<Product>> GetProducts();
+        Task<Product> GetProductById(int productId);
         Task<Product> AddProduct(Product product, Stream imageStream, string imageName);
+
+        Task<bool> HideProduct(int productId);
+        Task<bool> DeleteProduct(int productId);
+        Task<bool> UpdateProduct(Product product, Stream imageStream, string imageName);
         Task<Order> PlaceOrder(Order order);
     }
 }
+

@@ -265,8 +265,8 @@ namespace KioskAPI.Controllers
             await _userService.RevokeRefreshToken(user, request.RefreshToken);
             await _userService.SaveRefreshToken(newRefreshToken);
 
-            Response.Headers.Add("Access-Token", newJwtToken);
-            Response.Headers.Add("Refresh-Token", newRefreshToken.Token);
+            Response.Headers.Append("Access-Token", newJwtToken);
+            Response.Headers.Append("Refresh-Token", newRefreshToken.Token);
 
             return Ok(new ApiResponse
             {

@@ -8,13 +8,20 @@ namespace KioskApp.Services
 {
     public class UserService : IUserService
     {
+        private IUserApiService _userApiService;
         private User _currentUser;
         private string _accessToken;
         private string _refreshToken;
 
+
+        public UserService()
+        {
+            _userApiService = DependencyService.Get<IUserApiService>();
+        }
+
         public async Task<ApiResponse> Register(User user)
         {
-            var response = await DependencyService.Get<IApiService>().RegisterUser(user);
+            var response = await _userApiService.RegisterUser(user);
             if (response.IsSuccess)
             {
                 await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
@@ -37,7 +44,7 @@ namespace KioskApp.Services
 
         public async Task<ApiResponse> Authenticate(string email, string password)
         {
-            var response = await DependencyService.Get<IApiService>().AuthenticateUser(email, password);
+            var response = await _userApiService.AuthenticateUser(email, password);
             if (response.IsSuccess)
             {
                 await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
@@ -61,7 +68,7 @@ namespace KioskApp.Services
         {
             var refreshToken = await SecureStorage.GetAsync("refresh_token");
 
-            var response = await DependencyService.Get<IApiService>().AuthenticateWithToken(refreshToken);
+            var response = await _userApiService.AuthenticateWithToken(refreshToken);
 
             if (response.IsSuccess)
             {
@@ -102,7 +109,7 @@ namespace KioskApp.Services
             _refreshToken = null;
             await SecureStorage.SetAsync("auth_token", string.Empty);
             await SecureStorage.SetAsync("refresh_token", string.Empty);
-            DependencyService.Get<IApiService>().ClearAuthorizationHeader();
+            _userApiService.ClearAuthorizationHeader();
             Debug.WriteLine("User has been logged out and tokens removed.");
         }
 

@@ -8,7 +8,7 @@ namespace KioskApp.Views
         public CartPage()
         {
             InitializeComponent();
-            BindingContext = new CartViewModel(DependencyService.Get<IApiService>());
+            BindingContext = new CartViewModel();
         }
     }
 }

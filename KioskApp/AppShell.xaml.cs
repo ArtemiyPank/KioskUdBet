@@ -17,6 +17,7 @@ namespace KioskApp
             Routing.RegisterRoute(nameof(ProfilePage), typeof(ProfilePage));
             Routing.RegisterRoute(nameof(ProductsPage), typeof(ProductsPage));
             Routing.RegisterRoute(nameof(AddProductPage), typeof(AddProductPage));
+            Routing.RegisterRoute(nameof(EditProductPage), typeof(EditProductPage));
             Routing.RegisterRoute(nameof(CartPage), typeof(CartPage));
 
             // Subscribe to messages

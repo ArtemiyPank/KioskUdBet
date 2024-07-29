@@ -11,7 +11,7 @@ namespace KioskApp.ViewModels
 {
     public class AddProductViewModel : BaseViewModel
     {
-        private readonly IApiService _apiService;
+        private readonly IProductApiService _productApiService;
         private Stream _imageStream;
         private string _imageName;
         private string _imagePath;
@@ -19,7 +19,7 @@ namespace KioskApp.ViewModels
 
         public AddProductViewModel()
         {
-            _apiService = DependencyService.Get<IApiService>();
+            _productApiService = DependencyService.Get<IProductApiService>();
             NewProduct = new Product();
             ChooseImageCommand = new Command(async () => await ChooseImage());
             AddProductCommand = new Command(async () => await AddProduct());
@@ -50,7 +50,7 @@ namespace KioskApp.ViewModels
                 if (!Validate()) return;
 
                 NewProduct.ImageUrl = "";
-                await _apiService.AddProduct(NewProduct, _imageStream, _imageName);
+                await _productApiService.AddProduct(NewProduct, _imageStream, _imageName);
                 NewProduct = new Product(); // Очистка формы после добавления продукта
                 _imageStream?.Dispose(); // Закрытие потока после использования
                 _imageStream = null; // Сброс переменной после использования
@@ -89,8 +89,8 @@ namespace KioskApp.ViewModels
 
         private bool Validate()
         {
-            if (string.IsNullOrEmpty(NewProduct.Name) || 
-                string.IsNullOrEmpty(NewProduct.Description) || 
+            if (string.IsNullOrEmpty(NewProduct.Name) ||
+                string.IsNullOrEmpty(NewProduct.Description) ||
                 string.IsNullOrEmpty(NewProduct.Category) ||
                 !NewProduct.Price.HasValue ||
                 !NewProduct.Stock.HasValue)
@@ -99,6 +99,11 @@ namespace KioskApp.ViewModels
                 return false;
             }
 
+            if (_imageStream == null)
+            {
+                ErrorMessage = "Product image is required.";
+                return false;
+            }
 
             if (NewProduct.Price <= 0)
             {
@@ -112,16 +117,10 @@ namespace KioskApp.ViewModels
                 return false;
             }
 
-            if (_imageStream == null)
-            {
-                ErrorMessage = "Product image is required.";
-                return false;
-            }
-
             ErrorMessage = string.Empty;
             return true;
         }
 
-        
+
     }
 }

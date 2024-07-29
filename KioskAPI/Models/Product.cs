@@ -9,6 +9,7 @@
         public decimal Price { get; set; }
         public int Stock { get; set; }
         public string ImageUrl { get; set; }
+        public bool IsHidden { get; set; } = false;
         public DateTime LastUpdated { get; set; }
     }
 }

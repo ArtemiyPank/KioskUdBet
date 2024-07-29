@@ -4,94 +4,96 @@ using System.IO;
 using System.Windows.Input;
 using KioskApp.Models;
 using KioskApp.Services;
-using KioskApp.Views;
 using MvvmHelpers;
+using Microsoft.Maui.Controls;
+using System.Threading.Tasks;
+using KioskApp.Views;
 
 namespace KioskApp.ViewModels
 {
     public class ProductsViewModel : BaseViewModel
     {
-        private readonly IApiService _apiService;
+        private readonly IProductApiService _productApiService;
         private readonly CacheService _cacheService;
 
-        private Stream _imageStream;
-        private string _imageName;
 
         public ObservableCollection<Product> Products { get; private set; }
-        public Product NewProduct { get; set; }
         public ICommand LoadProductsCommand { get; private set; }
         public ICommand NavigateToAddProductCommand { get; private set; }
-        public ICommand AddToCartCommand { get; private set; }
 
+        public ICommand DeleteProductCommand { get; private set; }
+        public ICommand NavigateToEditProductCommand { get; private set; }
+        public ICommand HideProductCommand { get; private set; }
 
         public ProductsViewModel()
         {
-            _apiService = DependencyService.Get<IApiService>();
+            _productApiService = DependencyService.Get<IProductApiService>();
             _cacheService = new CacheService();
-            Initialize();
+
+
+            Products = new ObservableCollection<Product>();
+
+            LoadProductsCommand = new Command(async () => await LoadProducts());
+            
+            NavigateToAddProductCommand = new Command(async () => await NavigateToAddProduct());
+            DeleteProductCommand = new Command<Product>(async (product) => await DeleteProduct(product));
+            NavigateToEditProductCommand = new Command<Product>(async (product) => await NavigateToEditProduct(product));
+            HideProductCommand = new Command<Product>(async (product) => await HideProduct(product));
+
+            LoadProductsCommand.Execute(null);
+
 
             MessagingCenter.Subscribe<AddProductViewModel>(this, "ProductAdded", async (sender) =>
+            {
+                await LoadProducts();
+            });
+
+            MessagingCenter.Subscribe<EditProductViewModel>(this, "ProductUpdated", async (sender) =>
             {
                 await LoadProducts();
             });
         }
 
 
-        private void Initialize()
-        {
-            Debug.WriteLine("ТВОЮ МААААААААААТЬ Initialize");
 
-            _cacheService.ClearCache();
-            Products = new ObservableCollection<Product>();
-            NewProduct = new Product();
-            LoadProductsCommand = new Command(async () => await LoadProducts());
-            NavigateToAddProductCommand = new Command(async () => await NavigateToAddProduct());
-            AddToCartCommand = new Command<Product>(OnAddToCart);
-
-            LoadProductsCommand.Execute(null);
-            Debug.WriteLine("ТВОЮ МААААААААААТЬ Initialize END");
-
-        }
-
+        
 
         private async Task LoadProducts()
         {
             try
             {
-                var products = await _apiService.GetProducts();
+                //_cacheService.LogProductCache();
+
+                var products = await _productApiService.GetProducts();
                 Products.Clear();
 
                 var cachedProductIds = _cacheService.GetCachedProductIds();
 
                 foreach (var product in products)
                 {
-                    cachedProductIds.Remove(product.Id); // Удалить товар из списка кэшированных ID, если он существует в базе данных
+                    cachedProductIds.Remove(product.Id);
 
                     var cachedProduct = await _cacheService.GetProductAsync(product.Id);
                     if (cachedProduct != null)
                     {
-                        if (cachedProduct.LastUpdated != product.LastUpdated) // Проверка, изменился ли товар
+                        if (cachedProduct.LastUpdated != product.LastUpdated)
                         {
-                            Debug.WriteLine($"Updating cache for product {product.Id}");
-                            var imageStream = await _apiService.DownloadProductImage(product.ImageUrl);
+                            var imageStream = await _productApiService.DownloadProductImage(product.ImageUrl);
                             await _cacheService.SaveProductAsync(product, imageStream);
                         }
                         product.ImageUrl = _cacheService.GetProductImagePath(product.Id);
                     }
                     else
                     {
-                        Debug.WriteLine($"Caching new product {product.Id}");
-                        var imageStream = await _apiService.DownloadProductImage(product.ImageUrl);
+                        var imageStream = await _productApiService.DownloadProductImage(product.ImageUrl);
                         await _cacheService.SaveProductAsync(product, imageStream);
                         product.ImageUrl = _cacheService.GetProductImagePath(product.Id);
                     }
                     Products.Add(product);
                 }
 
-                // Удаление несуществующих товаров из кэша
                 foreach (var productId in cachedProductIds)
                 {
-                    Debug.WriteLine($"Deleting cache for non-existing product {productId}");
                     _cacheService.DeleteProduct(productId);
                 }
             }
@@ -106,11 +108,39 @@ namespace KioskApp.ViewModels
             await Shell.Current.GoToAsync(nameof(AddProductPage));
         }
 
-
-
-        private void OnAddToCart(Product product)
+        private async Task NavigateToEditProduct(Product product)
         {
-            // Add product to the cart
+            var navigationParameter = new Dictionary<string, object>
+            {
+                { "Product", product }
+            };
+            await Shell.Current.GoToAsync(nameof(EditProductPage), navigationParameter);
         }
+
+
+        private async Task HideProduct(Product product)
+        {
+            var result = await _productApiService.HideProduct(product.Id);
+            if (result)
+            {
+                product.IsHidden = true;
+                await LoadProducts();
+                await LoadProducts();
+            }
+        }
+
+        private async Task DeleteProduct(Product product)
+        {
+            Debug.WriteLine($"product - {product.ToString()}");
+
+            var result = await _productApiService.DeleteProduct(product.Id);
+            if (result)
+            {
+                Products.Remove(product);
+                await LoadProducts();
+            }
+        }
+
+
     }
 }

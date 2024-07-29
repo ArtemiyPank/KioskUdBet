@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace KioskApp.Services
 {
-    public class CacheService
+    public class CacheService : ICacheService
     {
         private readonly string _cacheDirectory;
 
@@ -18,7 +18,7 @@ namespace KioskApp.Services
             }
         }
         public string CacheDirectory => _cacheDirectory;
-            
+
         public async Task SaveProductAsync(Product product, Stream imageStream)
         {
             try
@@ -129,6 +129,33 @@ namespace KioskApp.Services
                             .Select(Path.GetFileNameWithoutExtension)
                             .Select(int.Parse)
                             .ToList();
+        }
+
+
+        public async Task LogProductCache()
+        {
+            Debug.WriteLine("===================================================================================");
+
+            var productIds = GetCachedProductIds();
+            foreach (var productId in productIds)
+            {
+                var product = await GetProductAsync(productId);
+                if (product != null)
+                {
+                    Debug.WriteLine($"Product ID: {product.Id}");
+                    Debug.WriteLine($"Name: {product.Name}");
+                    Debug.WriteLine($"Description: {product.Description}");
+                    Debug.WriteLine($"Price: {product.Price}");
+                    Debug.WriteLine($"Stock: {product.Stock}");
+                    Debug.WriteLine($"Category: {product.Category}");
+                    Debug.WriteLine($"Last Updated: {product.LastUpdated}");
+                    Debug.WriteLine($"Image URL: {product.ImageUrl}");
+
+                    Debug.WriteLine("---------------------------------------------------");
+                }
+            }
+
+            Debug.WriteLine("===================================================================================");
         }
     }
 }

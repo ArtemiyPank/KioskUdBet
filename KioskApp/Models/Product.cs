@@ -9,6 +9,7 @@ public class Product
     public decimal? Price { get; set; }
     public int? Stock { get; set; }
     public string ImageUrl { get; set; }
+    public bool IsHidden { get; set; } = false;
     public DateTime LastUpdated { get; set; }
 
     public override string ToString()
@@ -20,6 +21,7 @@ public class Product
                $"Price: {Price:C}\n" +
                $"Stock: {Stock}\n" +
                $"Image URL: {ImageUrl}\n" +
+               $"Is hidden: {IsHidden}\n" +
                $"Last Updated: {LastUpdated:G}";
     }
 }

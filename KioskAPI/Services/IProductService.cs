@@ -6,7 +6,10 @@ namespace KioskAPI.Services
     {
         Task<List<Product>> GetProducts();
         Task<Product> AddProduct(Product product);
-        Task<Product> GetProduct(int id);
+        Task<Product> GetProductByIdAsync(int productId);
         Task<Product> UpdateProduct(int id, Product product);
+        Task<bool> HideProductAsync(int productId);
+        Task<bool> DeleteProductAsync(int productId);
+        Task<bool> UpdateProductAsync(Product product);
     }
 }

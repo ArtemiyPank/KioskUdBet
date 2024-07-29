@@ -9,13 +9,13 @@ using System.Text;
 
 namespace KioskApp.Services
 {
-    public class ApiService : IApiService
+    public class UserApiService : IUserApiService
     {
         private readonly HttpClient _httpClient;
         private string _accessToken;
         private string _refreshToken;
 
-        public ApiService(HttpClient httpClient)
+        public UserApiService(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }
@@ -237,94 +237,6 @@ namespace KioskApp.Services
             }
         }
 
-
-
-        public async Task<List<Product>> GetProducts()
-        {
-            Debug.WriteLine($"СССССССССССУУУУУУУУУУУУУККККККККККККККККААААААААААААААААААА");
-            var a = await _httpClient.GetFromJsonAsync<List<Product>>("api/products/getProducts");
-            Debug.WriteLine($"БЛЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯ");
-            return a;
-        }
-
-        public async Task<Product> AddProduct(Product product, Stream imageStream, string imageName)
-        {
-            try
-            {
-                var content = new MultipartFormDataContent
-                {
-                    { new StringContent(product.Name ?? string.Empty), "Name" },
-                    { new StringContent(product.Description ?? string.Empty), "Description" },
-            { new StringContent(product.Price?.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "Price" }, // Использование инвариантной культуры
-            { new StringContent(product.Stock?.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "Stock" }, // Использование инвариантной культуры
-                    { new StringContent(product.Category ?? string.Empty), "Category" }, // Добавляем поле Category
-                    { new StringContent(product.LastUpdated.ToString("o")), "LastUpdated" } // Преобразование даты в строку в формате ISO 8601
-                };
-
-                if (imageStream != null)
-                {
-                    Debug.WriteLine($"Image stream length: {imageStream.Length}");
-                    imageStream.Position = 0; // Обнуление позиции потока перед использованием
-                    var imageContent = new StreamContent(imageStream);
-                    imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-                    content.Add(imageContent, "image", imageName);
-
-                    // Установим ImageUrl только если изображение было загружено
-                    product.ImageUrl = $"/images/{imageName}";
-                }
-
-                // Добавим ImageUrl в запрос
-                content.Add(new StringContent(product.ImageUrl ?? string.Empty), "ImageUrl");
-
-                // Log the content being sent
-                foreach (var item in content)
-                {
-                    if (item is StringContent stringContent)
-                    {
-                        Debug.WriteLine($"StringContent: {await stringContent.ReadAsStringAsync()}");
-                    }
-                    else if (item is StreamContent streamContent)
-                    {
-                        Debug.WriteLine($"StreamContent: {imageName}");
-                    }
-                }
-
-                var response = await _httpClient.PostAsync("api/products/addProduct", content);
-                Debug.WriteLine($"Response status code: {response.StatusCode}");
-                var responseBody = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"Response body: {responseBody}");
-                response.EnsureSuccessStatusCode();
-
-                return await response.Content.ReadFromJsonAsync<Product>();
-            }
-            catch (HttpRequestException ex)
-            {
-                Debug.WriteLine($"HttpRequestException: {ex.Message}");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error while adding product: {ex.Message}");
-                throw;
-            }
-        }
-
-
-
-
-
-        public async Task<Stream> DownloadProductImage(string imageUrl)
-        {
-            return await _httpClient.GetStreamAsync(imageUrl);
-        }
-
-
-        // Place an order on the server
-        public async Task<Order> PlaceOrder(Order order)
-        {
-            var response = await _httpClient.PostAsJsonAsync("/api/orders", order);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<Order>();
-        }
     }
 }
+

@@ -23,9 +23,12 @@ namespace KioskApp
                 BaseAddress = new Uri("https://10.0.2.2:7074") // Для Android эмулятора
             };
 
-            var apiService = new ApiService(httpClient);
+            var userApiService = new UserApiService(httpClient);
+            DependencyService.RegisterSingleton<IUserApiService>(userApiService);
 
-            DependencyService.RegisterSingleton<IApiService>(apiService);
+            var productApiService = new ProductApiService(httpClient);
+            DependencyService.RegisterSingleton<IProductApiService>(productApiService);
+
             DependencyService.Register<IUserService, UserService>();
 
             MainPage = new AppShell();

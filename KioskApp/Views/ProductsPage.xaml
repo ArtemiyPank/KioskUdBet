@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:KioskApp.ViewModels"
              x:Class="KioskApp.Views.ProductsPage"
-             Title="Products">
+             Title="Products"
+             x:Name="productsPage">
 
     <ScrollView>
         <StackLayout Padding="10">
@@ -20,6 +21,10 @@
                                 <Label Text="{Binding Price, StringFormat='Price: {0:C}'}" />
                                 <Label Text="{Binding Stock, StringFormat='Stock: {0}'}" />
                                 <Button Text="Add to Cart" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProductsViewModel}}, Path=AddToCartCommand}" CommandParameter="{Binding .}" />
+
+                                <Button Text="Delete" Command="{Binding Path=BindingContext.DeleteProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}" />
+                                <Button Text="Edit" Command="{Binding Path=BindingContext.NavigateToEditProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}" />
+                                <Button Text="Hide" Command="{Binding Path=BindingContext.HideProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}" />
                             </StackLayout>
                         </Frame>
                     </DataTemplate>
@@ -27,5 +32,4 @@
             </CollectionView>
         </StackLayout>
     </ScrollView>
-
 </ContentPage>

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using System.IO;
+using System.Diagnostics;
 
 namespace KioskAPI.Controllers
 {
@@ -76,27 +77,115 @@ namespace KioskAPI.Controllers
         }
 
 
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProduct(int id, [FromForm] Product product, IFormFile image)
+        [HttpPut("updateProduct/{id}")]
+        public async Task<IActionResult> UpdateProduct(int id, [FromForm] Product product, IFormFile image = null)
         {
-            product.LastUpdated = DateTime.UtcNow; // Устанавливаем дату последнего обновления
-
-            if (image != null && image.Length > 0)
+            try
             {
-                var imagePath = Path.Combine("wwwroot/images", image.FileName);
-                using (var stream = new FileStream(imagePath, FileMode.Create))
+                if (id != product.Id)
                 {
-                    await image.CopyToAsync(stream);
+                    return BadRequest("Product ID mismatch");
                 }
-                product.ImageUrl = $"/images/{image.FileName}";
-            }
 
-            var updatedProduct = await _productService.UpdateProduct(id, product);
-            return Ok(updatedProduct);
+                _logger.LogInformation("Updating product.");
+                _logger.LogInformation($"Product ID: {product.Id}");
+                _logger.LogInformation($"Product name: {product.Name}");
+                _logger.LogInformation($"Product description: {product.Description}");
+                _logger.LogInformation($"Product price: {product.Price}");
+                _logger.LogInformation($"Product stock: {product.Stock}");
+                _logger.LogInformation($"Product category: {product.Category}");
+                _logger.LogInformation($"Product last updated: {product.LastUpdated}");
+
+                // Получаем существующий продукт без отслеживания
+                var existingProduct = await _productService.GetProductByIdAsync(id);
+                if (existingProduct == null)
+                {
+                    return NotFound("Product not found");
+                }
+
+                // Копируем обновляемые свойства в существующий продукт
+                existingProduct.Name = product.Name;
+                existingProduct.Description = product.Description;
+                existingProduct.Price = product.Price;
+                existingProduct.Stock = product.Stock;
+                existingProduct.Category = product.Category;
+                existingProduct.LastUpdated = product.LastUpdated;
+
+                // Обновляем продукт
+                await _productService.UpdateProduct(id, existingProduct);
+
+                if (image != null && image.Length > 0)
+                {
+                    _logger.LogInformation($"Received image with length: {image.Length}");
+
+                    // Генерируем новое имя файла
+                    var newFileName = $"{existingProduct.Name}_{existingProduct.Category}_{existingProduct.Id}.jpg";
+                    var imagePath = Path.Combine("wwwroot/images", newFileName);
+
+                    using (var stream = new FileStream(imagePath, FileMode.Create))
+                    {
+                        _logger.LogInformation("Starting to copy image to file stream.");
+                        await image.CopyToAsync(stream);
+                        _logger.LogInformation("Finished copying image to file stream.");
+                    }
+                    existingProduct.ImageUrl = $"/images/{newFileName}";
+
+                    // Обновляем продукт с новым URL изображения
+                    await _productService.UpdateProduct(existingProduct.Id, existingProduct);
+                }
+                else
+                {
+                    _logger.LogInformation("No image provided for the update.");
+                }
+
+                return Ok(existingProduct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error while updating product: {ex.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error updating product");
+            }
         }
 
 
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<Product>> GetProductById(int id)
+        {
+            var product = await _productService.GetProductByIdAsync(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+            return product;
+        }
+
+
+
+
+
+        [HttpPut("hide/{id}")]
+        public async Task<IActionResult> HideProduct(int id)
+        {
+            var result = await _productService.HideProductAsync(id);
+            if (result)
+            {
+                return NoContent();
+            }
+            return NotFound();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            _logger.LogInformation($"is - {id}");
+            var result = await _productService.DeleteProductAsync(id);
+            if (result)
+            {
+                return NoContent();
+            }
+            return NotFound();
+        }
 
     }
 }
