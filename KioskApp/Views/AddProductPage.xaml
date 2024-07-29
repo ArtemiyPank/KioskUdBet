@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:KioskApp.ViewModels"
+             x:Class="KioskApp.Views.AddProductPage"
+             Title="Add Product">
+
+    <ContentPage.BindingContext>
+        <vm:AddProductViewModel />
+    </ContentPage.BindingContext>
+
+    <StackLayout Padding="10">
+        <Entry Placeholder="Name" Text="{Binding NewProduct.Name}" />
+        <Entry Placeholder="Description" Text="{Binding NewProduct.Description}" />
+        <Entry Placeholder="Category" Text="{Binding NewProduct.Category}" />
+        <Entry Placeholder="Price" Text="{Binding NewProduct.Price}" Keyboard="Numeric" />
+        <Entry Placeholder="Stock" Text="{Binding NewProduct.Stock}" Keyboard="Numeric" />
+
+        <Button Text="Choose Image" Command="{Binding ChooseImageCommand}" />
+        <Image Source="{Binding ImagePath}" HeightRequest="200" WidthRequest="200" />
+        
+        <Button Text="Add Product" Command="{Binding AddProductCommand}" />
+
+        <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}" />
+    </StackLayout>
+</ContentPage>

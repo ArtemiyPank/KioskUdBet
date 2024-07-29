@@ -27,6 +27,7 @@ namespace KioskApp
             builder.Services.AddTransient<LoginViewModel>();
             builder.Services.AddTransient<RegisterViewModel>();
             builder.Services.AddTransient<ProductsViewModel>();
+            builder.Services.AddTransient<AddProductViewModel>();
             builder.Services.AddTransient<CartViewModel>();
 
             // Register views
@@ -34,6 +35,7 @@ namespace KioskApp
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<RegisterPage>();
             builder.Services.AddTransient<ProductsPage>();
+            builder.Services.AddTransient<AddProductPage>();
             builder.Services.AddTransient<CartPage>();
 
 #if DEBUG

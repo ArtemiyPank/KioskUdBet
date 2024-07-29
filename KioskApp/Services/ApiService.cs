@@ -252,14 +252,14 @@ namespace KioskApp.Services
             try
             {
                 var content = new MultipartFormDataContent
-        {
-            { new StringContent(product.Name ?? string.Empty), "Name" },
-            { new StringContent(product.Description ?? string.Empty), "Description" },
-            { new StringContent(product.Price.ToString("0,00", new CultureInfo("ru-RU"))), "Price" },
-            { new StringContent(product.Stock.ToString(CultureInfo.InvariantCulture)), "Stock" },
-            { new StringContent(product.Category ?? string.Empty), "Category" }, // Добавляем поле Category
-            { new StringContent(product.LastUpdated.ToString("o")), "LastUpdated" } // Преобразование даты в строку в формате ISO 8601
-        };
+                {
+                    { new StringContent(product.Name ?? string.Empty), "Name" },
+                    { new StringContent(product.Description ?? string.Empty), "Description" },
+            { new StringContent(product.Price?.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "Price" }, // Использование инвариантной культуры
+            { new StringContent(product.Stock?.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "Stock" }, // Использование инвариантной культуры
+                    { new StringContent(product.Category ?? string.Empty), "Category" }, // Добавляем поле Category
+                    { new StringContent(product.LastUpdated.ToString("o")), "LastUpdated" } // Преобразование даты в строку в формате ISO 8601
+                };
 
                 if (imageStream != null)
                 {

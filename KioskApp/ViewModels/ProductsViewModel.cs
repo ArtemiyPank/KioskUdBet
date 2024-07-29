@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Input;
 using KioskApp.Models;
 using KioskApp.Services;
+using KioskApp.Views;
 using MvvmHelpers;
 
 namespace KioskApp.ViewModels
@@ -19,8 +20,7 @@ namespace KioskApp.ViewModels
         public ObservableCollection<Product> Products { get; private set; }
         public Product NewProduct { get; set; }
         public ICommand LoadProductsCommand { get; private set; }
-        public ICommand AddProductCommand { get; private set; }
-        public ICommand ChooseImageCommand { get; private set; }
+        public ICommand NavigateToAddProductCommand { get; private set; }
         public ICommand AddToCartCommand { get; private set; }
 
 
@@ -29,32 +29,26 @@ namespace KioskApp.ViewModels
             _apiService = DependencyService.Get<IApiService>();
             _cacheService = new CacheService();
             Initialize();
+
+            MessagingCenter.Subscribe<AddProductViewModel>(this, "ProductAdded", async (sender) =>
+            {
+                await LoadProducts();
+            });
         }
 
-        public ProductsViewModel(IApiService apiService)
-        {
-            _apiService = apiService;
-            _cacheService = new CacheService();
-            Initialize();
-        }
 
         private void Initialize()
         {
-            _cacheService.ClearCache();
+            Debug.WriteLine("ТВОЮ МААААААААААТЬ Initialize");
 
+            _cacheService.ClearCache();
             Products = new ObservableCollection<Product>();
             NewProduct = new Product();
             LoadProductsCommand = new Command(async () => await LoadProducts());
-            Debug.WriteLine("ТВОЮ МААААААААААТЬ Initialize 1");
-            AddProductCommand = new Command(async () => await AddProduct());
-            Debug.WriteLine("ТВОЮ МААААААААААТЬ Initialize 2");
-            ChooseImageCommand = new Command(async () => await ChooseImage());
-            Debug.WriteLine("ТВОЮ МААААААААААТЬ Initialize 3");
+            NavigateToAddProductCommand = new Command(async () => await NavigateToAddProduct());
             AddToCartCommand = new Command<Product>(OnAddToCart);
 
-            Debug.WriteLine("ТВОЮ МААААААААААТЬ Initialize 4");
             LoadProductsCommand.Execute(null);
-
             Debug.WriteLine("ТВОЮ МААААААААААТЬ Initialize END");
 
         }
@@ -107,44 +101,11 @@ namespace KioskApp.ViewModels
             }
         }
 
-
-        private async Task AddProduct()
+        private async Task NavigateToAddProduct()
         {
-            try
-            {
-                NewProduct.ImageUrl = "";
-                await _apiService.AddProduct(NewProduct, _imageStream, _imageName);
-                Products.Add(NewProduct);
-                NewProduct = new Product(); // Очистка формы после добавления продукта
-                _imageStream?.Dispose(); // Закрытие потока после использования
-                _imageStream = null; // Сброс переменной после использования
-
-                await LoadProducts(); // Обновление списка продуктов
-            }
-            catch (HttpRequestException ex)
-            {
-                Debug.WriteLine($"HttpRequestException: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error adding product: {ex.Message}");
-            }
+            await Shell.Current.GoToAsync(nameof(AddProductPage));
         }
 
-        private async Task ChooseImage()
-        {
-            var result = await FilePicker.PickAsync(new PickOptions
-            {
-                FileTypes = FilePickerFileType.Images,
-                PickerTitle = "Pick an image"
-            });
-
-            if (result != null)
-            {
-                _imageStream = await result.OpenReadAsync();
-                _imageName = result.FileName;
-            }
-        }
 
 
         private void OnAddToCart(Product product)

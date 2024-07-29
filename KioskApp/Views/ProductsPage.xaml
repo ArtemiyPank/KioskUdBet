@@ -6,14 +6,8 @@
              Title="Products">
 
     <ScrollView>
-        <StackLayout>
-            <Entry Placeholder="Name" Text="{Binding NewProduct.Name}"/>
-            <Entry Placeholder="Description" Text="{Binding NewProduct.Description}" />
-            <Entry Placeholder="Category" Text="{Binding NewProduct.Category}" />
-            <Entry Placeholder="Price" Text="{Binding NewProduct.Price}" Keyboard="Numeric" />
-            <Entry Placeholder="Stock" Text="{Binding NewProduct.Stock}" Keyboard="Numeric" />
-            <Button Text="Choose Image" Command="{Binding ChooseImageCommand}" />
-            <Button Text="Add Product" Command="{Binding AddProductCommand}" />
+        <StackLayout Padding="10">
+            <Button Text="Add Product" Command="{Binding NavigateToAddProductCommand}" />
 
             <CollectionView ItemsSource="{Binding Products}">
                 <CollectionView.ItemTemplate>
