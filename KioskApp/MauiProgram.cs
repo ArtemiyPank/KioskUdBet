@@ -1,4 +1,5 @@
-﻿using KioskApp.Services;
+﻿using KioskApp.Helpers;
+using KioskApp.Services;
 using KioskApp.ViewModels;
 using KioskApp.Views;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,12 @@ namespace KioskApp
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
+            // Register the global state service as a singleton
+            builder.Services.AddSingleton<AppState>();
+
             // Register other services
+            builder.Services.AddSingleton<IUserApiService, UserApiService>();
+            builder.Services.AddSingleton<IProductApiService, ProductApiService>();
             builder.Services.AddSingleton<IUserService, UserService>();
             builder.Services.AddSingleton<CacheService>();
 

@@ -1,4 +1,5 @@
 ﻿using KioskApp.Models;
+using KioskApp.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,21 +15,27 @@ namespace KioskApp.Services
     internal class ProductApiService : IProductApiService
     {
         private readonly HttpClient _httpClient;
+        private IUserApiService _userApiService;
 
 
         public ProductApiService(HttpClient httpClient)
         {
             _httpClient = httpClient;
+            _userApiService = DependencyService.Get<IUserApiService>();
         }
+
+
 
 
 
         public async Task<List<Product>> GetProducts()
         {
-            Debug.WriteLine($"СССССССССССУУУУУУУУУУУУУККККККККККККККККААААААААААААААААААА");
-            var a = await _httpClient.GetFromJsonAsync<List<Product>>("api/products/getProducts");
-            Debug.WriteLine($"БЛЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯЯ");
-            return a;
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Get, "api/products/getProducts");
+            });
+
+            return await response.Content.ReadFromJsonAsync<List<Product>>();
         }
 
         public async Task<Product> AddProduct(Product product, Stream imageStream, string imageName)
@@ -73,7 +80,15 @@ namespace KioskApp.Services
                     }
                 }
 
-                var response = await _httpClient.PostAsync("api/products/addProduct", content);
+
+                var response = await _userApiService.SendRequestAsync(() =>
+                {
+                    return new HttpRequestMessage(HttpMethod.Post, "api/products/addProduct")
+                    {
+                        Content = content
+                    };
+                });
+                //var response = await _httpClient.PostAsync("api/products/addProduct", content);
 
 
                 Debug.WriteLine($"Response status code: {response.StatusCode}");
@@ -103,7 +118,13 @@ namespace KioskApp.Services
 
         public async Task<Product> GetProductById(int productId)
         {
-            var response = await _httpClient.GetAsync($"api/products/{productId}");
+
+            var response = await _userApiService.SendRequestAsync(() => { 
+                return new HttpRequestMessage(HttpMethod.Post, $"api/products/{productId}"); 
+            });
+
+            //var response = await _httpClient.GetAsync($"api/products/{productId}");
+            
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<Product>();
         }
@@ -111,14 +132,26 @@ namespace KioskApp.Services
 
         public async Task<bool> HideProduct(int productId)
         {
-            var response = await _httpClient.PutAsync($"api/products/hide/{productId}", null);
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Put, $"api/products/hide/{productId}");
+            });
+
+            //var response = await _httpClient.PutAsync($"api/products/hide/{productId}", null);
+
             return response.IsSuccessStatusCode;
         }
 
         public async Task<bool> DeleteProduct(int productId)
         {
             Debug.WriteLine($"productId - {productId}");
-            var response = await _httpClient.DeleteAsync($"api/products/{productId}");
+
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Delete, $"api/products/{productId}");
+            });
+
+            //var response = await _httpClient.DeleteAsync($"api/products/{productId}");
             return response.IsSuccessStatusCode;
         }
 
@@ -126,10 +159,19 @@ namespace KioskApp.Services
         // Place an order on the server
         public async Task<Order> PlaceOrder(Order order)
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/orders", order);
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Post, "/api/orders")
+                {
+                    Content = JsonContent.Create(order)
+                };
+            });
+
             response.EnsureSuccessStatusCode();
+
             return await response.Content.ReadFromJsonAsync<Order>();
         }
+
 
         public async Task<bool> UpdateProduct(Product product, Stream imageStream, string imageName)
         {
@@ -177,9 +219,12 @@ namespace KioskApp.Services
                     }
                 }
 
-                var url = $"api/products/updateProduct/{product.Id}";
-                Debug.WriteLine($"Sending PUT request to URL: {url}");
-                var response = await _httpClient.PutAsync(url, content);
+                var response = await _userApiService.SendRequestAsync(() =>
+                {
+                    return new HttpRequestMessage(HttpMethod.Put, $"api/products/updateProduct/{product.Id}") { Content = content };
+                });
+
+                //var response = await _httpClient.PutAsync($"api/products/updateProduct/{product.Id}", content);
 
                 // Логирование ответа сервера
                 Debug.WriteLine($"Response status code: {response.StatusCode}");
@@ -199,7 +244,7 @@ namespace KioskApp.Services
                 Debug.WriteLine($"Error while updating product: {ex.Message}");
                 throw;
             }
-     
+
         }
     }
 }

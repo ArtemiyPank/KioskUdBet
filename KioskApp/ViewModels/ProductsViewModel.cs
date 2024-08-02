@@ -8,16 +8,18 @@ using MvvmHelpers;
 using Microsoft.Maui.Controls;
 using System.Threading.Tasks;
 using KioskApp.Views;
+using KioskApp.ViewModels;
 
 namespace KioskApp.ViewModels
 {
     public class ProductsViewModel : BaseViewModel
     {
         private readonly IProductApiService _productApiService;
-        private readonly CacheService _cacheService;
-
+        private readonly IUserService _userService;
+        private readonly ICacheService _cacheService;
 
         public ObservableCollection<Product> Products { get; private set; }
+        public ICommand AddToCartCommand { get; private set; }
         public ICommand LoadProductsCommand { get; private set; }
         public ICommand NavigateToAddProductCommand { get; private set; }
 
@@ -25,16 +27,30 @@ namespace KioskApp.ViewModels
         public ICommand NavigateToEditProductCommand { get; private set; }
         public ICommand HideProductCommand { get; private set; }
 
+        public bool IsAdmin
+        {
+            get
+            {
+                if (_userService.GetCurrentUser() != null)
+                {
+                    return _userService.GetCurrentUser()?.Role == "Admin";
+                }
+                else { return false; }
+            }
+        }
+
         public ProductsViewModel()
         {
             _productApiService = DependencyService.Get<IProductApiService>();
+            _userService = DependencyService.Get<IUserService>();
             _cacheService = new CacheService();
 
 
             Products = new ObservableCollection<Product>();
 
+            AddToCartCommand = new Command<Product>(OnAddToCart);
             LoadProductsCommand = new Command(async () => await LoadProducts());
-            
+
             NavigateToAddProductCommand = new Command(async () => await NavigateToAddProduct());
             DeleteProductCommand = new Command<Product>(async (product) => await DeleteProduct(product));
             NavigateToEditProductCommand = new Command<Product>(async (product) => await NavigateToEditProduct(product));
@@ -52,11 +68,25 @@ namespace KioskApp.ViewModels
             {
                 await LoadProducts();
             });
+
+            // Loading products when user logs out of account
+            MessagingCenter.Subscribe<ProfileViewModel>(this, "UserStateChanged", async (sender) =>
+            {
+                OnPropertyChanged(nameof(IsAdmin));
+                await LoadProducts();
+            });
+
+            // Loading products when user logs in of account or when user registrate an account
+            MessagingCenter.Subscribe<AppShell>(this, "UserStateChanged", async (sender) =>
+            {
+                OnPropertyChanged(nameof(IsAdmin));
+                await LoadProducts();
+            });
         }
 
 
 
-        
+
 
         private async Task LoadProducts()
         {
@@ -64,9 +94,9 @@ namespace KioskApp.ViewModels
             {
                 //_cacheService.LogProductCache();
 
-                var products = await _productApiService.GetProducts();
-                Products.Clear();
+                Products.Clear(); // Очистка списка перед загрузкой новых данных
 
+                var products = await _productApiService.GetProducts();
                 var cachedProductIds = _cacheService.GetCachedProductIds();
 
                 foreach (var product in products)
@@ -139,6 +169,14 @@ namespace KioskApp.ViewModels
                 Products.Remove(product);
                 await LoadProducts();
             }
+        }
+
+
+        private void OnAddToCart(Product product)
+        {
+            // Логика добавления продукта в корзину
+            Debug.WriteLine($"Product added to cart: {product.Name}");
+            // Здесь вы можете добавить продукт в корзину
         }
 
 

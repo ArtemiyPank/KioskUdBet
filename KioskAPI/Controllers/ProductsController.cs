@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using System.IO;
 using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
 
 namespace KioskAPI.Controllers
 {
@@ -15,11 +16,13 @@ namespace KioskAPI.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly ITokenService _tokenService;
         private readonly ILogger<ProductsController> _logger;
 
-        public ProductsController(IProductService productService, ILogger<ProductsController> logger)
+        public ProductsController(IProductService productService, ITokenService tokenService, ILogger<ProductsController> logger)
         {
             _productService = productService;
+            _tokenService = tokenService;
             _logger = logger;
         }
 
@@ -31,6 +34,20 @@ namespace KioskAPI.Controllers
             return Ok(products);
         }
 
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<Product>> GetProductById(int id)
+        {
+            var product = await _productService.GetProductByIdAsync(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+            return product;
+        }
+
+
+        [Authorize(Roles = "Admin")]
         [HttpPost("addProduct")]
         public async Task<IActionResult> AddProduct([FromForm] Product product, IFormFile image)
         {
@@ -77,6 +94,7 @@ namespace KioskAPI.Controllers
         }
 
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("updateProduct/{id}")]
         public async Task<IActionResult> UpdateProduct(int id, [FromForm] Product product, IFormFile image = null)
         {
@@ -148,22 +166,7 @@ namespace KioskAPI.Controllers
         }
 
 
-
-        [HttpPut("{id}")]
-        public async Task<ActionResult<Product>> GetProductById(int id)
-        {
-            var product = await _productService.GetProductByIdAsync(id);
-            if (product == null)
-            {
-                return NotFound();
-            }
-            return product;
-        }
-
-
-
-
-
+        [Authorize(Roles = "Admin")]
         [HttpPut("hide/{id}")]
         public async Task<IActionResult> HideProduct(int id)
         {
@@ -175,6 +178,7 @@ namespace KioskAPI.Controllers
             return NotFound();
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {

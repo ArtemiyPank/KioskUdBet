@@ -48,7 +48,10 @@ namespace KioskApp.ViewModels
         private async void OnLogout()
         {
             await _userService.ClearCurrentUserAsync();
+
             UpdateUserState();
+            MessagingCenter.Send(this, "UserStateChanged"); // To update the product page
+
         }
 
         public void UpdateUserState()
@@ -56,6 +59,7 @@ namespace KioskApp.ViewModels
             OnPropertyChanged(nameof(CurrentUser));
             OnPropertyChanged(nameof(IsAuthenticated));
             OnPropertyChanged(nameof(IsNotAuthenticated));
+
         }
     }
 }

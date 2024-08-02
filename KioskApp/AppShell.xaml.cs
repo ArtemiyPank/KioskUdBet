@@ -47,6 +47,7 @@ namespace KioskApp
             {
                 profilePage.BindingContext = profileViewModel;
             }
+            MessagingCenter.Send(this, "UserStateChanged"); // To update the product page
         }
     }
 }

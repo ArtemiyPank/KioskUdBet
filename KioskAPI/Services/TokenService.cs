@@ -1,5 +1,6 @@
 ﻿using KioskAPI.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.IdentityModel.Tokens.Jwt;
@@ -12,11 +13,61 @@ namespace KioskAPI.Services
     public class TokenService : ITokenService
     {
         private readonly IConfiguration _configuration;
+        private readonly ILogger<TokenService> _logger;
+        private readonly TokenValidationParameters _tokenValidationParameters;
 
-        public TokenService(IConfiguration configuration)
+        public TokenService(IConfiguration configuration, ILogger<TokenService> logger)
         {
             _configuration = configuration;
+            _logger = logger;
+
+
+            // Инициализация параметров валидации токенов
+            _tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _configuration["Jwt:Issuer"],
+                ValidAudience = _configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]))
+            };
         }
+
+        public void ValidateToken(string token)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            try
+            {
+                var principal = tokenHandler.ValidateToken(token, _tokenValidationParameters, out var validatedToken);
+
+                if (!(validatedToken is JwtSecurityToken jwtToken) ||
+                    !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    throw new SecurityTokenException("Invalid token");
+                }
+
+                // Логирование всех клеймов токена для отладки
+                foreach (var claim in principal.Claims)
+                {
+                    _logger.LogInformation($"Claim Type: {claim.Type}, Value: {claim.Value}");
+                }
+
+                var userId = principal.Claims.FirstOrDefault(c => c.Type == "Id")?.Value;
+                var userRole = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+
+                _logger.LogInformation($"User ID: {userId}, Role: {userRole}");
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Token validation failed: {ex.Message}");
+                throw;
+            }
+        }
+
 
         public string GenerateAccessToken(User user)
         {
@@ -26,15 +77,18 @@ namespace KioskAPI.Services
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role)
+                    new Claim("Id", user.Id.ToString()), // Используем NameIdentifier для User ID
+                    new Claim(ClaimTypes.Role, user.Role) // Добавление User Role
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(30), // Краткосрочный токен на 30 минут
+                Issuer = _configuration["Jwt:Issuer"], // Добавление Issuer
+                Audience = _configuration["Jwt:Audience"], // Добавление Audience
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
+
 
         public RefreshToken GenerateRefreshToken(User user)
         {

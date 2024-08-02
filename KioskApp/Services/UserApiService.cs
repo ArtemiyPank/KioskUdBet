@@ -6,26 +6,71 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Globalization;
 using System.Text;
+using System.Net;
+using KioskApp.Helpers;
+using Microsoft.Maui.ApplicationModel.Communication;
 
 namespace KioskApp.Services
 {
     public class UserApiService : IUserApiService
     {
+        private readonly AppState _appState;
         private readonly HttpClient _httpClient;
-        private string _accessToken;
-        private string _refreshToken;
+
 
         public UserApiService(HttpClient httpClient)
         {
             _httpClient = httpClient;
+            _appState = DependencyService.Get<AppState>();
         }
+
+        // Метод для отправки запросов с автоматическим обновлением токенов
+        public async Task<HttpResponseMessage> SendRequestAsync(Func<HttpRequestMessage> createRequest)
+        {
+            if (_appState.CurrentUser != null)
+            {
+                await EnsureAccessToken();
+
+                var request = createRequest();
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appState.AccessToken);
+
+                return await _httpClient.SendAsync(request);
+            }
+
+            return await _httpClient.SendAsync(createRequest());
+        }
+
+
+        // Ensure access token is valid and refresh if necessary
+        private async Task EnsureAccessToken()
+        {
+            if (IsTokenExpired(_appState.AccessToken))
+            {
+                await RefreshTokens();
+            }
+        }
+
+        // Check if the token is expired
+        private bool IsTokenExpired(string token)
+        {
+            var jwtToken = new JwtSecurityTokenHandler().ReadToken(token) as JwtSecurityToken;
+            return jwtToken.ValidTo < DateTime.UtcNow;
+        }
+
 
         // Register a new user and retrieve access and refresh tokens
         public async Task<AuthResponse> RegisterUser(User user)
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("/api/users/register", user);
+                var response = await SendRequestAsync(() =>
+                {
+                    return new HttpRequestMessage(HttpMethod.Post, "/api/users/register")
+                    {
+                        Content = JsonContent.Create(user)
+                    };
+                });
+
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse>();
 
                 Debug.WriteLine($"result - {result.ToString}");
@@ -47,8 +92,6 @@ namespace KioskApp.Services
 
                     // Deserialize JsonElement to User object
                     var registeredUser = JsonSerializer.Deserialize<User>(jsonElement.GetRawText());
-
-                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                     return new AuthResponse
                     {
@@ -84,7 +127,14 @@ namespace KioskApp.Services
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("/api/users/authenticate", new { email, password });
+                var response = await SendRequestAsync(() =>
+                {
+                    return new HttpRequestMessage(HttpMethod.Post, "/api/users/authenticate")
+                    {
+                        Content = JsonContent.Create(new { email, password })
+                    };
+                });
+
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse>();
 
                 if (result.IsSuccess)
@@ -100,8 +150,6 @@ namespace KioskApp.Services
 
                     // Deserialize JsonElement to User object
                     var user = JsonSerializer.Deserialize<User>(jsonElement.GetRawText());
-
-                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                     return new AuthResponse
                     {
@@ -137,11 +185,15 @@ namespace KioskApp.Services
         {
             try
             {
-                _httpClient.DefaultRequestHeaders.Add("Refresh-Token", refreshToken);
-                var response = await _httpClient.PostAsync("/api/users/authenticateWithToken", null);
+                var response = await SendRequestAsync(() =>
+                {
+                    var request = new HttpRequestMessage(HttpMethod.Post, "/api/users/authenticateWithToken");
+                    request.Headers.Add("Refresh-Token", refreshToken);
+                    return request;
+                });
+
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse>();
 
-                Debug.WriteLine($"result.Message - {result.Message}");
                 Debug.WriteLine($"result.Message - {result.Message}");
 
                 if (result.IsSuccess)
@@ -157,8 +209,6 @@ namespace KioskApp.Services
 
                     // Deserialize JsonElement to User object
                     var user = JsonSerializer.Deserialize<User>(jsonElement.GetRawText());
-
-                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                     return new AuthResponse
                     {
@@ -181,29 +231,13 @@ namespace KioskApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in AuthenticateWithToken: {ex.Message}");
+                Debug.WriteLine($"Error in AuthenticateWithToken in UserApiService: {ex.Message}");
                 return new AuthResponse
                 {
                     IsSuccess = false,
                     Message = ex.Message
                 };
             }
-        }
-
-        // Ensure access token is valid and refresh if necessary
-        private async Task EnsureAccessToken()
-        {
-            if (_accessToken == null || IsTokenExpired(_accessToken))
-            {
-                await RefreshTokens();
-            }
-        }
-
-        // Check if the token is expired
-        private bool IsTokenExpired(string token)
-        {
-            var jwtToken = new JwtSecurityTokenHandler().ReadToken(token) as JwtSecurityToken;
-            return jwtToken.ValidTo < DateTime.UtcNow;
         }
 
         // Clear the authorization header
@@ -214,16 +248,19 @@ namespace KioskApp.Services
         }
 
         // Refresh access and refresh tokens
-        private async Task RefreshTokens()
+        public async Task RefreshTokens()
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("/api/users/refresh", new { Token = _accessToken, RefreshToken = _refreshToken });
-                if (response.Headers.TryGetValues("Access-Token", out var accessTokens) &&
-                    response.Headers.TryGetValues("Refresh-Token", out var refreshTokens))
+                var refreshToken = await SecureStorage.GetAsync("refresh_token");
+                var response = await _httpClient.PostAsJsonAsync("/api/users/refresh", new { Token = _appState.AccessToken, RefreshToken = refreshToken });
+                if (response.Headers.TryGetValues("Access-Token", out var newAccessTokens) &&
+                    response.Headers.TryGetValues("Refresh-Token", out var newRefreshTokens))
                 {
-                    _accessToken = accessTokens.FirstOrDefault();
-                    _refreshToken = refreshTokens.FirstOrDefault();
+                    _appState.AccessToken = newAccessTokens.FirstOrDefault();
+
+                    await SecureStorage.SetAsync("auth_token", newAccessTokens.FirstOrDefault());
+                    await SecureStorage.SetAsync("refresh_token", newRefreshTokens.FirstOrDefault());
                 }
                 else
                 {

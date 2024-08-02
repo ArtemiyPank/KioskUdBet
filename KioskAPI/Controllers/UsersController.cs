@@ -249,19 +249,20 @@ namespace KioskAPI.Controllers
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
         {
-            var principal = _tokenService.GetPrincipalFromExpiredToken(request.Token);
-            var email = principal.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Email)?.Value;
-            var user = await _userService.GetUserByEmail(email);
-
-            if (user == null || !await _userService.ValidateRefreshToken(user, request.RefreshToken))
+            // Проверяем валидность Refresh токена
+            var user = await _userService.GetUserByRefreshToken(request.RefreshToken);
+            if (user == null)
+            {
                 return Unauthorized(new ApiResponse
                 {
                     IsSuccess = false,
                     Message = "Invalid refresh token"
                 });
+            }
 
             var newJwtToken = _tokenService.GenerateAccessToken(user);
             var newRefreshToken = _tokenService.GenerateRefreshToken(user);
+
             await _userService.RevokeRefreshToken(user, request.RefreshToken);
             await _userService.SaveRefreshToken(newRefreshToken);
 
@@ -274,25 +275,6 @@ namespace KioskAPI.Controllers
                 Message = "Token refreshed successfully",
                 Data = user
             });
-        }
-
-        // Generate a JWT token
-        private string GenerateJwtToken(User user)
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new Claim[]
-                {
-                    new Claim(JwtRegisteredClaimNames.Email, user.Id.ToString()),
-                    new Claim(ClaimTypes.Role, user.Role)
-                }),
-                Expires = DateTime.UtcNow.AddDays(7),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
         }
     }
 }

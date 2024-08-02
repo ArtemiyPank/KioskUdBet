@@ -1,4 +1,6 @@
 ﻿using KioskApp.Services;
+using KioskApp.Helpers;
+
 using Microsoft.Maui.Controls;
 using System;
 using System.Diagnostics;
@@ -22,6 +24,9 @@ namespace KioskApp
             {
                 BaseAddress = new Uri("https://10.0.2.2:7074") // Для Android эмулятора
             };
+
+            var AppState = new AppState();
+            DependencyService.RegisterSingleton<AppState>(AppState);
 
             var userApiService = new UserApiService(httpClient);
             DependencyService.RegisterSingleton<IUserApiService>(userApiService);

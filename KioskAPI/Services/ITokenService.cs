@@ -8,5 +8,6 @@ namespace KioskAPI.Services
         string GenerateAccessToken(User user);
         RefreshToken GenerateRefreshToken(User user);
         ClaimsPrincipal GetPrincipalFromExpiredToken(string token);
+        void ValidateToken(string token);
     }
 }

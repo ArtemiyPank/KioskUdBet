@@ -3,6 +3,7 @@ using KioskAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Threading.Tasks;
@@ -51,38 +52,6 @@ namespace KioskAPI.Services
             return (user, newAccessToken, newRefreshToken.Token);
         }
 
-        // Get user by token
-        public async Task<User> GetUserByToken(string token)
-        {
-            _logger.LogInformation("I am in GetUserByToken!");
-
-            var handler = new JwtSecurityTokenHandler();
-            var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
-
-            if (jwtToken == null)
-            {
-                _logger.LogWarning("Invalid JWT token");
-                return null;
-            }
-
-            foreach (var claim in jwtToken.Claims)
-            {
-                _logger.LogInformation($"Claim type: {claim.Type}, value: {claim.Value}");
-            }
-
-            var email = jwtToken.Claims.FirstOrDefault(claim => claim.Type == JwtRegisteredClaimNames.Email)?.Value;
-
-            if (email == null)
-            {
-                _logger.LogWarning("Email not found in token");
-                return null;
-            }
-
-            _logger.LogInformation($"email: {email}");
-
-            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-        }
-
         // Register a new user
         public async Task<User> Register(User user)
         {
@@ -107,6 +76,11 @@ namespace KioskAPI.Services
         public async Task<User> GetUserByEmail(string email)
         {
             return await _context.Users.SingleOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<User> GetUserById(int userId)
+        {
+            return await _context.Users.FindAsync(userId);
         }
 
         // Save refresh token in the database

@@ -2,7 +2,7 @@
 using System.Globalization;
 using Microsoft.Maui.Controls;
 
-namespace KioskApp.Converters
+namespace KioskApp.Helpers
 {
     public class StringNotEmptyToBoolConverter : IValueConverter
     {

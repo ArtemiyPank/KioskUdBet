@@ -6,9 +6,19 @@
              Title="Products"
              x:Name="productsPage">
 
+    <ContentPage.BindingContext>
+        <vm:ProductsViewModel />
+    </ContentPage.BindingContext>
+
     <ScrollView>
         <StackLayout Padding="10">
-            <Button Text="Add Product" Command="{Binding NavigateToAddProductCommand}" />
+            <Button Text="Add Product" Command="{Binding NavigateToAddProductCommand}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsAdmin}" Value="False">
+                        <Setter Property="IsVisible" Value="False" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
 
             <CollectionView ItemsSource="{Binding Products}">
                 <CollectionView.ItemTemplate>
@@ -22,9 +32,30 @@
                                 <Label Text="{Binding Stock, StringFormat='Stock: {0}'}" />
                                 <Button Text="Add to Cart" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProductsViewModel}}, Path=AddToCartCommand}" CommandParameter="{Binding .}" />
 
-                                <Button Text="Delete" Command="{Binding Path=BindingContext.DeleteProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}" />
-                                <Button Text="Edit" Command="{Binding Path=BindingContext.NavigateToEditProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}" />
-                                <Button Text="Hide" Command="{Binding Path=BindingContext.HideProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}" />
+                                <!-- Only visible to admins -->
+                                <Button Text="Delete" Command="{Binding Path=BindingContext.DeleteProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}" Value="False">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+
+                                <Button Text="Edit" Command="{Binding Path=BindingContext.NavigateToEditProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}" Value="False">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+
+                                <Button Text="Hide" Command="{Binding Path=BindingContext.HideProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}" Value="False">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
                             </StackLayout>
                         </Frame>
                     </DataTemplate>
