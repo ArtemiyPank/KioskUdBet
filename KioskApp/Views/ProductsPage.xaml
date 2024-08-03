@@ -49,13 +49,14 @@
                                     </Button.Triggers>
                                 </Button>
 
-                                <Button Text="Hide" Command="{Binding Path=BindingContext.HideProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}">
+                                <Button Text="{Binding VisibilityIsHiddenText}" Command="{Binding Path=BindingContext.ToggleVisibilityCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}">
                                     <Button.Triggers>
                                         <DataTrigger TargetType="Button" Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}" Value="False">
                                             <Setter Property="IsVisible" Value="False" />
                                         </DataTrigger>
                                     </Button.Triggers>
                                 </Button>
+
                             </StackLayout>
                         </Frame>
                     </DataTemplate>

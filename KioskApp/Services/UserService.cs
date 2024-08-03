@@ -122,7 +122,6 @@ namespace KioskApp.Services
             _appState.AccessToken = null;
             await SecureStorage.SetAsync("auth_token", string.Empty);
             await SecureStorage.SetAsync("refresh_token", string.Empty);
-            _userApiService.ClearAuthorizationHeader();
             Debug.WriteLine("User has been logged out and tokens removed.");
         }
 

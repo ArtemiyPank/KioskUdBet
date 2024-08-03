@@ -1,4 +1,6 @@
-﻿namespace KioskApp.Models;
+﻿using System.Diagnostics;
+
+namespace KioskApp.Models;
 
 public class Product
 {
@@ -11,6 +13,8 @@ public class Product
     public string ImageUrl { get; set; }
     public bool IsHidden { get; set; } = false;
     public DateTime LastUpdated { get; set; }
+
+    public string VisibilityIsHiddenText => IsHidden ? "Show" : "Hide";
 
     public override string ToString()
     {

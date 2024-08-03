@@ -167,16 +167,18 @@ namespace KioskAPI.Controllers
 
 
         [Authorize(Roles = "Admin")]
-        [HttpPut("hide/{id}")]
-        public async Task<IActionResult> HideProduct(int id)
+        [HttpPut("toggleVisibility/{id}")]
+        public async Task<IActionResult> ToggleVisibility(int id)
         {
-            var result = await _productService.HideProductAsync(id);
+            _logger.LogInformation($"is - {id}");
+            var result = await _productService.ToggleVisibility(id);
             if (result)
             {
                 return NoContent();
             }
             return NotFound();
         }
+
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]

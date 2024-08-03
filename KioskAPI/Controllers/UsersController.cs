@@ -166,8 +166,8 @@ namespace KioskAPI.Controllers
                 Role = user.Role
             };
 
-            Response.Headers.Add("Access-Token", token);
-            Response.Headers.Add("Refresh-Token", refreshToken.Token);
+            Response.Headers.Append("Access-Token", token);
+            Response.Headers.Append("Refresh-Token", refreshToken.Token);
 
             return Ok(new ApiResponse
             {
@@ -223,8 +223,8 @@ namespace KioskAPI.Controllers
                     Role = user.Role
                 };
 
-                Response.Headers.Add("Access-Token", newJwtToken);
-                Response.Headers.Add("Refresh-Token", newRefreshToken);
+                Response.Headers.Append("Access-Token", newJwtToken);
+                Response.Headers.Append("Refresh-Token", newRefreshToken);
 
                 _logger.LogInformation($"User {user.Email} authenticated successfully");
                 return Ok(new ApiResponse

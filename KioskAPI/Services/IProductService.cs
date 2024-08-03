@@ -8,8 +8,8 @@ namespace KioskAPI.Services
         Task<Product> AddProduct(Product product);
         Task<Product> GetProductByIdAsync(int productId);
         Task<Product> UpdateProduct(int id, Product product);
-        Task<bool> HideProductAsync(int productId);
         Task<bool> DeleteProductAsync(int productId);
         Task<bool> UpdateProductAsync(Product product);
+        Task<bool> ToggleVisibility(int id);
     }
 }

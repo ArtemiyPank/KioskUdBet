@@ -71,7 +71,7 @@ namespace KioskAPI.Services
         }
 
 
-        public async Task<bool> HideProductAsync(int productId)
+        public async Task<bool> ToggleVisibility(int productId)
         {
             var product = await _context.Products.FindAsync(productId);
             if (product == null)
@@ -79,7 +79,7 @@ namespace KioskAPI.Services
                 return false;
             }
 
-            product.IsHidden = true;
+            product.IsHidden = !product.IsHidden;
             _context.Products.Update(product);
             await _context.SaveChangesAsync();
             return true;

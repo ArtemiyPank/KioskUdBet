@@ -25,7 +25,7 @@ namespace KioskApp.ViewModels
 
         public ICommand DeleteProductCommand { get; private set; }
         public ICommand NavigateToEditProductCommand { get; private set; }
-        public ICommand HideProductCommand { get; private set; }
+        public ICommand ToggleVisibilityCommand { get; private set; }
 
         public bool IsAdmin
         {
@@ -54,7 +54,7 @@ namespace KioskApp.ViewModels
             NavigateToAddProductCommand = new Command(async () => await NavigateToAddProduct());
             DeleteProductCommand = new Command<Product>(async (product) => await DeleteProduct(product));
             NavigateToEditProductCommand = new Command<Product>(async (product) => await NavigateToEditProduct(product));
-            HideProductCommand = new Command<Product>(async (product) => await HideProduct(product));
+            ToggleVisibilityCommand = new Command<Product>(async (product) => await ToggleVisibility(product));
 
             LoadProductsCommand.Execute(null);
 
@@ -103,6 +103,11 @@ namespace KioskApp.ViewModels
                 {
                     cachedProductIds.Remove(product.Id);
 
+                    if (!IsAdmin && product.IsHidden)
+                    {
+                        continue;
+                    }
+
                     var cachedProduct = await _cacheService.GetProductAsync(product.Id);
                     if (cachedProduct != null)
                     {
@@ -124,7 +129,7 @@ namespace KioskApp.ViewModels
 
                 foreach (var productId in cachedProductIds)
                 {
-                    _cacheService.DeleteProduct(productId);
+                    await _cacheService.DeleteProduct(productId);
                 }
             }
             catch (Exception ex)
@@ -148,13 +153,12 @@ namespace KioskApp.ViewModels
         }
 
 
-        private async Task HideProduct(Product product)
+        private async Task ToggleVisibility(Product product)
         {
-            var result = await _productApiService.HideProduct(product.Id);
+            var result = await _productApiService.ToggleVisibility(product.Id);
             if (result)
             {
-                product.IsHidden = true;
-                await LoadProducts();
+                product.IsHidden = !product.IsHidden;
                 await LoadProducts();
             }
         }
@@ -176,7 +180,6 @@ namespace KioskApp.ViewModels
         {
             // Логика добавления продукта в корзину
             Debug.WriteLine($"Product added to cart: {product.Name}");
-            // Здесь вы можете добавить продукт в корзину
         }
 
 

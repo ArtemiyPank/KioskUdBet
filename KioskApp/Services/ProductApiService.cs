@@ -25,7 +25,21 @@ namespace KioskApp.Services
         }
 
 
+        public async Task<Stream> DownloadProductImage(string imageUrl)
+        {
+            return await _httpClient.GetStreamAsync(imageUrl);
+        }
 
+        public async Task<Product> GetProductById(int productId)
+        {
+
+            var response = await _userApiService.SendRequestAsync(() => {
+                return new HttpRequestMessage(HttpMethod.Post, $"api/products/{productId}");
+            });
+
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<Product>();
+        }
 
 
         public async Task<List<Product>> GetProducts()
@@ -60,11 +74,11 @@ namespace KioskApp.Services
                     imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
                     content.Add(imageContent, "image", imageName);
 
-                    // Установим ImageUrl только если изображение было загружено
+                    // Установили ImageUrl только если изображение было загружено
                     product.ImageUrl = $"/images/{imageName}";
                 }
 
-                // Добавим ImageUrl в запрос
+                // Добавили ImageUrl в запрос
                 content.Add(new StringContent(product.ImageUrl ?? string.Empty), "ImageUrl");
 
                 Debug.WriteLine("Sending the following content:");
@@ -88,8 +102,6 @@ namespace KioskApp.Services
                         Content = content
                     };
                 });
-                //var response = await _httpClient.PostAsync("api/products/addProduct", content);
-
 
                 Debug.WriteLine($"Response status code: {response.StatusCode}");
                 var responseBody = await response.Content.ReadAsStringAsync();
@@ -108,68 +120,6 @@ namespace KioskApp.Services
                 Debug.WriteLine($"Error while adding product: {ex.Message}");
                 throw;
             }
-        }
-
-
-        public async Task<Stream> DownloadProductImage(string imageUrl)
-        {
-            return await _httpClient.GetStreamAsync(imageUrl);
-        }
-
-        public async Task<Product> GetProductById(int productId)
-        {
-
-            var response = await _userApiService.SendRequestAsync(() => { 
-                return new HttpRequestMessage(HttpMethod.Post, $"api/products/{productId}"); 
-            });
-
-            //var response = await _httpClient.GetAsync($"api/products/{productId}");
-            
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<Product>();
-        }
-
-
-        public async Task<bool> HideProduct(int productId)
-        {
-            var response = await _userApiService.SendRequestAsync(() =>
-            {
-                return new HttpRequestMessage(HttpMethod.Put, $"api/products/hide/{productId}");
-            });
-
-            //var response = await _httpClient.PutAsync($"api/products/hide/{productId}", null);
-
-            return response.IsSuccessStatusCode;
-        }
-
-        public async Task<bool> DeleteProduct(int productId)
-        {
-            Debug.WriteLine($"productId - {productId}");
-
-            var response = await _userApiService.SendRequestAsync(() =>
-            {
-                return new HttpRequestMessage(HttpMethod.Delete, $"api/products/{productId}");
-            });
-
-            //var response = await _httpClient.DeleteAsync($"api/products/{productId}");
-            return response.IsSuccessStatusCode;
-        }
-
-
-        // Place an order on the server
-        public async Task<Order> PlaceOrder(Order order)
-        {
-            var response = await _userApiService.SendRequestAsync(() =>
-            {
-                return new HttpRequestMessage(HttpMethod.Post, "/api/orders")
-                {
-                    Content = JsonContent.Create(order)
-                };
-            });
-
-            response.EnsureSuccessStatusCode();
-
-            return await response.Content.ReadFromJsonAsync<Order>();
         }
 
 
@@ -224,8 +174,6 @@ namespace KioskApp.Services
                     return new HttpRequestMessage(HttpMethod.Put, $"api/products/updateProduct/{product.Id}") { Content = content };
                 });
 
-                //var response = await _httpClient.PutAsync($"api/products/updateProduct/{product.Id}", content);
-
                 // Логирование ответа сервера
                 Debug.WriteLine($"Response status code: {response.StatusCode}");
                 var responseBody = await response.Content.ReadAsStringAsync();
@@ -244,7 +192,51 @@ namespace KioskApp.Services
                 Debug.WriteLine($"Error while updating product: {ex.Message}");
                 throw;
             }
+        }
 
+
+        public async Task<bool> DeleteProduct(int productId)
+        {
+            Debug.WriteLine($"productId - {productId}");
+
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Delete, $"api/products/{productId}");
+            });
+
+            return response.IsSuccessStatusCode;
+        }
+
+
+        public async Task<bool> ToggleVisibility(int productId)
+        {
+            Debug.WriteLine("I am in ToggleVisibility in Api Service");
+
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Put, $"api/products/toggleVisibility/{productId}");
+            });
+
+            return response.IsSuccessStatusCode;
+        }
+
+
+
+
+        // Place an order on the server
+        public async Task<Order> PlaceOrder(Order order)
+        {
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Post, "/api/orders")
+                {
+                    Content = JsonContent.Create(order)
+                };
+            });
+
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<Order>();
         }
     }
 }
