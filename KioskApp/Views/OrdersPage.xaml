@@ -1,0 +1,18 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:KioskApp.ViewModels"
+             x:Class="KioskApp.Views.OrdersPage">
+
+    <StackLayout Padding="10">
+        <CollectionView ItemsSource="{Binding Orders}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="10">
+                        <Label Text="{Binding Id}" FontSize="Medium" />
+                        <Label Text="{Binding Status}" FontSize="Small" HorizontalOptions="EndAndExpand" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </StackLayout>
+</ContentPage>

@@ -1,12 +1,80 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:local="clr-namespace:KioskApp.Views"
+             xmlns:vm="clr-namespace:KioskApp.ViewModels"
+             xmlns:sliders="clr-namespace:Syncfusion.Maui.Sliders;assembly=Syncfusion.Maui.Sliders"
              x:Class="KioskApp.Views.CartPage"
-             Title="Checkout">
+             x:Name="cartPage"
+             Title="Cart">
 
-    <StackLayout Padding="20">
-        <Entry Placeholder="Delivery Location" Text="{Binding DeliveryLocation}" />
-        <Button Text="Place Order" Command="{Binding PlaceOrderCommand}" />
+    <StackLayout Padding="10">
+        <!-- If the user is not authenticated -->
+        <StackLayout IsVisible="{Binding IsNotAuthenticated}">
+            <Label Text="Please register to place an order." 
+                   FontSize="Medium" 
+                   HorizontalOptions="Center" />
+            <Button Text="Register" 
+                    Command="{Binding NavigateToRegisterCommand}"
+                    HorizontalOptions="Center" />
+        </StackLayout>
+
+        <!-- If the user is authenticated -->
+        <StackLayout IsVisible="{Binding IsAuthenticated}">
+            <StackLayout Padding="10">
+                <Label Text="{Binding DeliveryLocation}" FontSize="Medium" HorizontalOptions="Center" />
+
+                <!--<Label Text="Select time:" FontSize="Medium" HorizontalOptions="Center" />-->
+
+                <Label Text="{Binding SelectedTimeRangeText}" FontSize="Medium" HorizontalOptions="Center" />
+
+                <sliders:SfDateTimeRangeSlider 
+                    x:Name="timeRangeSlider"
+                    Minimum="2024-08-27T18:00:00" 
+                    Maximum="2024-08-27T22:00:00"
+                    IntervalType="Hours"
+                    RangeStart="{Binding SelectedStartTime, Mode=TwoWay}" 
+                    RangeEnd="{Binding SelectedEndTime, Mode=TwoWay}" 
+                    ShowTicks="True"
+                    ShowLabels="True"
+                    Interval="1"
+                    DateFormat="HH:mm"
+                    DragBehavior="Both"
+                    ValueChanging="OnRangeSliderValueChanging"
+                    HorizontalOptions="FillAndExpand" />
+
+            </StackLayout>
+
+
+
+            <CollectionView ItemsSource="{Binding CartItems}" Margin="0,20,0,0">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame BorderColor="LightGray" Padding="5" Margin="5" CornerRadius="10">
+                            <Grid ColumnDefinitions="Auto, *, Auto, Auto, Auto" RowDefinitions="Auto">
+                                <!-- Product Image -->
+                                <Image Source="{Binding Product.ImageUrl}" HeightRequest="50" WidthRequest="50" Grid.Column="0" VerticalOptions="Center" HorizontalOptions="Start" />
+
+                                <!-- Product Name and Type -->
+                                <StackLayout Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Start" Margin="10,0,0,0">
+                                    <Label Text="{Binding Product.Name}" FontAttributes="Bold" />
+                                    <Label Text="{Binding Product.Category}" FontSize="Small" TextColor="Gray" />
+                                </StackLayout> 
+
+                                <!-- Quantity Buttons -->
+                                <StackLayout Orientation="Horizontal" Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End">
+                                    <Button Text="-" Command="{Binding Path=BindingContext.DecreaseQuantityCommand, Source={x:Reference cartPage}}" CommandParameter="{Binding .}" WidthRequest="35" />
+                                    <Label Text="{Binding Quantity}" VerticalOptions="Center" HorizontalOptions="Center" Margin="5,0"/>
+                                    <Button Text="+" Command="{Binding Path=BindingContext.IncreaseQuantityCommand, Source={x:Reference cartPage}}" CommandParameter="{Binding .}" WidthRequest="35" />
+                                </StackLayout>
+
+                                <!-- Product Price -->
+                                <Label Text="{Binding TotalPrice, StringFormat='{0:C}'}" Grid.Column="3" VerticalOptions="Center" HorizontalOptions="End" FontSize="Medium" Margin="10,0,0,0"/>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Button Text="Place Order" Command="{Binding PlaceOrderCommand}" Margin="0,20,0,0"/>
+        </StackLayout>
     </StackLayout>
-
 </ContentPage>

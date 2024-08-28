@@ -1,4 +1,6 @@
-﻿namespace KioskApp.Models
+﻿using System.Text.Json.Serialization;
+
+namespace KioskApp.Models
 {
     public class User
     {
@@ -11,6 +13,9 @@
         public string Building { get; set; } // "Paz" / "Degel" / "Lavan / "Thelet"
         public string RoomNumber { get; set; }
         public string Role { get; set; } = "User"; // "User" / "Admin"
+
+        [JsonIgnore]
+        public string FullName => $"{FirstName} {LastName}";
 
         public override string ToString()
         {

@@ -3,6 +3,7 @@ using System;
 using KioskAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KioskAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240830203423_AddOrderItemModel")]
+    partial class AddOrderItemModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.7");
@@ -154,6 +157,7 @@ namespace KioskAPI.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Salt")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -204,7 +208,7 @@ namespace KioskAPI.Migrations
 
             modelBuilder.Entity("KioskAPI.Models.OrderItem", b =>
                 {
-                    b.HasOne("KioskAPI.Models.Order", null)
+                    b.HasOne("KioskAPI.Models.Order", "Order")
                         .WithMany("OrderItems")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -215,6 +219,8 @@ namespace KioskAPI.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Order");
 
                     b.Navigation("Product");
                 });
@@ -237,7 +243,8 @@ namespace KioskAPI.Migrations
 
             modelBuilder.Entity("KioskAPI.Models.User", b =>
                 {
-                    b.Navigation("RefreshToken");
+                    b.Navigation("RefreshToken")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

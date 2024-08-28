@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace KioskApp.Services
 {
-    internal interface IProductApiService
+    public interface IProductApiService
     {
         
         Task<Stream> DownloadProductImage(string imageUrl);

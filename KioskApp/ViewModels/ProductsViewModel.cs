@@ -8,7 +8,6 @@ using MvvmHelpers;
 using Microsoft.Maui.Controls;
 using System.Threading.Tasks;
 using KioskApp.Views;
-using KioskApp.ViewModels;
 
 namespace KioskApp.ViewModels
 {
@@ -17,15 +16,15 @@ namespace KioskApp.ViewModels
         private readonly IProductApiService _productApiService;
         private readonly IUserService _userService;
         private readonly ICacheService _cacheService;
+        private readonly CartViewModel _cartViewModel;
 
         public ObservableCollection<Product> Products { get; private set; }
-        public ICommand AddToCartCommand { get; private set; }
         public ICommand LoadProductsCommand { get; private set; }
         public ICommand NavigateToAddProductCommand { get; private set; }
-
         public ICommand DeleteProductCommand { get; private set; }
         public ICommand NavigateToEditProductCommand { get; private set; }
         public ICommand ToggleVisibilityCommand { get; private set; }
+        public ICommand AddToCartCommand { get; }
 
         public bool IsAdmin
         {
@@ -39,16 +38,26 @@ namespace KioskApp.ViewModels
             }
         }
 
-        public ProductsViewModel()
+        public ProductsViewModel(IProductApiService productApiService, IUserService userService, ICacheService cacheService, CartViewModel cartViewModel)
         {
-            _productApiService = DependencyService.Get<IProductApiService>();
-            _userService = DependencyService.Get<IUserService>();
-            _cacheService = new CacheService();
+            _productApiService = productApiService;
+            _userService = userService;
+            _cacheService = cacheService;
+            _cartViewModel = cartViewModel;
+            Debug.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            if (_cartViewModel == null)
+            {
+                Debug.WriteLine("CartViewModel is null.");
+            }
+            else
+            {
+                Debug.WriteLine("CartViewModel is not null.");
 
+            }
 
             Products = new ObservableCollection<Product>();
 
-            AddToCartCommand = new Command<Product>(OnAddToCart);
+            AddToCartCommand = new Command<Product>((product) => OnAddToCart(product));
             LoadProductsCommand = new Command(async () => await LoadProducts());
 
             NavigateToAddProductCommand = new Command(async () => await NavigateToAddProduct());
@@ -57,7 +66,6 @@ namespace KioskApp.ViewModels
             ToggleVisibilityCommand = new Command<Product>(async (product) => await ToggleVisibility(product));
 
             LoadProductsCommand.Execute(null);
-
 
             MessagingCenter.Subscribe<AddProductViewModel>(this, "ProductAdded", async (sender) =>
             {
@@ -76,7 +84,7 @@ namespace KioskApp.ViewModels
                 await LoadProducts();
             });
 
-            // Loading products when user logs in of account or when user registrate an account
+            // Loading products when user logs in or registers an account
             MessagingCenter.Subscribe<AppShell>(this, "UserStateChanged", async (sender) =>
             {
                 OnPropertyChanged(nameof(IsAdmin));
@@ -84,17 +92,11 @@ namespace KioskApp.ViewModels
             });
         }
 
-
-
-
-
         private async Task LoadProducts()
         {
             try
             {
-                //_cacheService.LogProductCache();
-
-                Products.Clear(); // Очистка списка перед загрузкой новых данных
+                Products.Clear(); // Clear the list before loading new data
 
                 var products = await _productApiService.GetProducts();
                 var cachedProductIds = _cacheService.GetCachedProductIds();
@@ -152,7 +154,6 @@ namespace KioskApp.ViewModels
             await Shell.Current.GoToAsync(nameof(EditProductPage), navigationParameter);
         }
 
-
         private async Task ToggleVisibility(Product product)
         {
             var result = await _productApiService.ToggleVisibility(product.Id);
@@ -165,8 +166,6 @@ namespace KioskApp.ViewModels
 
         private async Task DeleteProduct(Product product)
         {
-            Debug.WriteLine($"product - {product.ToString()}");
-
             var result = await _productApiService.DeleteProduct(product.Id);
             if (result)
             {
@@ -175,13 +174,13 @@ namespace KioskApp.ViewModels
             }
         }
 
-
         private void OnAddToCart(Product product)
         {
-            // Логика добавления продукта в корзину
+            Debug.WriteLine($"In OnAddToCart");
+
+            // Добавляем продукт в корзину, используя CartViewModel
+            _cartViewModel.AddToCartCommand.Execute(product);
             Debug.WriteLine($"Product added to cart: {product.Name}");
         }
-
-
     }
 }

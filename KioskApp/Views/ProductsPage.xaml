@@ -6,10 +6,6 @@
              Title="Products"
              x:Name="productsPage">
 
-    <ContentPage.BindingContext>
-        <vm:ProductsViewModel />
-    </ContentPage.BindingContext>
-
     <ScrollView>
         <StackLayout Padding="10">
             <Button Text="Add Product" Command="{Binding NavigateToAddProductCommand}">
@@ -30,7 +26,9 @@
                                 <Label Text="{Binding Description, StringFormat='Description: {0}'}" />
                                 <Label Text="{Binding Price, StringFormat='Price: {0:C}'}" />
                                 <Label Text="{Binding Stock, StringFormat='Stock: {0}'}" />
-                                <Button Text="Add to Cart" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProductsViewModel}}, Path=AddToCartCommand}" CommandParameter="{Binding .}" />
+                                <Button Text="Add to Cart" 
+                                        Command="{Binding Path=BindingContext.AddToCartCommand, Source={x:Reference productsPage}}"
+                                        CommandParameter="{Binding .}" />
 
                                 <!-- Only visible to admins -->
                                 <Button Text="Delete" Command="{Binding Path=BindingContext.DeleteProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}">

@@ -7,6 +7,7 @@ using KioskApp.Views;
 using KioskApp.Models;
 using MvvmHelpers;
 using Microsoft.Maui.Controls;
+using System.Windows.Input;
 
 namespace KioskApp.ViewModels
 {
@@ -14,6 +15,9 @@ namespace KioskApp.ViewModels
     {
         private readonly IUserApiService _apiService;
         private readonly IUserService _userService;
+
+        public ICommand NavigateToRegisterCommand { get; }
+
 
         public LoginViewModel()
         {
@@ -85,8 +89,19 @@ namespace KioskApp.ViewModels
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+
+        //private async void OnNavigateToRegister()
+        //{
+        //    await Shell.Current.GoToAsync(nameof(RegisterPage));
+        //}
+
+
+
         private async void OnNavigateToRegister()
         {
+            Debug.WriteLine($"Navigate to register");
+            await Shell.Current.GoToAsync(".."); // Navigate to previous page (ProfilePage)
+
             await Shell.Current.GoToAsync(nameof(RegisterPage));
         }
     }
