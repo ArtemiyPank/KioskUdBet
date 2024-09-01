@@ -12,7 +12,7 @@ namespace KioskAPI.Services
         Task<List<User>> GetAllUsers();
         Task<bool> EmailExists(string email);
         Task<User> GetUserByEmail(string email);
-        Task SaveRefreshToken(RefreshToken refreshToken);
+        Task SaveRefreshToken(int userId, string token, DateTime expiryDate);
         Task<bool> ValidateRefreshToken(User user, string refreshToken);
         Task RevokeRefreshToken(User user, string refreshToken);
         Task<User?> GetUserByRefreshToken(string refreshToken);

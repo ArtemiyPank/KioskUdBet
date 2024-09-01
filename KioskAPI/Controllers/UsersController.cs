@@ -89,7 +89,6 @@ namespace KioskAPI.Controllers
 
             var user = new User
             {
-                Id = request.Id,
                 Email = request.Email,
                 Salt = BCrypt.Net.BCrypt.GenerateSalt(), // Generate salt
                 FirstName = request.FirstName,
@@ -106,7 +105,7 @@ namespace KioskAPI.Controllers
 
             var token = _tokenService.GenerateAccessToken(newUser);
             var refreshToken = _tokenService.GenerateRefreshToken(newUser);
-            await _userService.SaveRefreshToken(refreshToken);
+            await _userService.SaveRefreshToken(newUser.Id, refreshToken.Token, refreshToken.ExpiryDate);
 
             var userResponse = new UserResponse
             {
@@ -152,7 +151,7 @@ namespace KioskAPI.Controllers
 
             var token = _tokenService.GenerateAccessToken(user);
             var refreshToken = _tokenService.GenerateRefreshToken(user);
-            await _userService.SaveRefreshToken(refreshToken);
+            await _userService.SaveRefreshToken(user.Id, refreshToken.Token, refreshToken.ExpiryDate);
 
             var userResponse = new UserResponse
             {
@@ -263,8 +262,7 @@ namespace KioskAPI.Controllers
             var newJwtToken = _tokenService.GenerateAccessToken(user);
             var newRefreshToken = _tokenService.GenerateRefreshToken(user);
 
-            await _userService.RevokeRefreshToken(user, request.RefreshToken);
-            await _userService.SaveRefreshToken(newRefreshToken);
+            await _userService.SaveRefreshToken(user.Id, newRefreshToken.Token, newRefreshToken.ExpiryDate);
 
             Response.Headers.Append("Access-Token", newJwtToken);
             Response.Headers.Append("Refresh-Token", newRefreshToken.Token);
@@ -277,4 +275,5 @@ namespace KioskAPI.Controllers
             });
         }
     }
+
 }

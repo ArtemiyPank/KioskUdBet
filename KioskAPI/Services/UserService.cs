@@ -3,9 +3,6 @@ using KioskAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace KioskAPI.Services
@@ -46,8 +43,8 @@ namespace KioskAPI.Services
             var newAccessToken = _tokenService.GenerateAccessToken(user);
             var newRefreshToken = _tokenService.GenerateRefreshToken(user);
 
-            await RevokeRefreshToken(user, refreshToken); // Revoke old refresh token
-            await SaveRefreshToken(newRefreshToken); // Save new refresh token
+            // Обновление существующего токена
+            await SaveRefreshToken(user.Id, newRefreshToken.Token, newRefreshToken.ExpiryDate);
 
             return (user, newAccessToken, newRefreshToken.Token);
         }
@@ -73,28 +70,42 @@ namespace KioskAPI.Services
         }
 
         // Get user by email
-        public async Task<User> GetUserByEmail(string email)
+        public async Task<User?> GetUserByEmail(string email)
         {
             return await _context.Users.SingleOrDefaultAsync(u => u.Email == email);
         }
 
-        public async Task<User> GetUserById(int userId)
+        // Get user by ID
+        public async Task<User?> GetUserById(int userId)
         {
             return await _context.Users.FindAsync(userId);
         }
 
-        // Save refresh token in the database
-        public async Task SaveRefreshToken(RefreshToken refreshToken)
+        // Save refresh token in the database (обновляем или создаем новый)
+        public async Task SaveRefreshToken(int userId, string token, DateTime expiryDate)
         {
-            var existingToken = await _context.RefreshTokens
-                .FirstOrDefaultAsync(t => t.UserId == refreshToken.UserId);
+            var refreshToken = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.UserId == userId);
 
-            if (existingToken != null)
+            if (refreshToken != null)
             {
-                _context.RefreshTokens.Remove(existingToken);
+                // Обновление существующего токена
+                refreshToken.Token = token;
+                refreshToken.ExpiryDate = expiryDate;
+                refreshToken.IsRevoked = false;
+            }
+            else
+            {
+                // Создание нового токена
+                refreshToken = new RefreshToken
+                {
+                    UserId = userId,
+                    Token = token,
+                    ExpiryDate = expiryDate,
+                    Created = DateTime.UtcNow
+                };
+                _context.RefreshTokens.Add(refreshToken);
             }
 
-            _context.RefreshTokens.Add(refreshToken);
             await _context.SaveChangesAsync();
         }
 
@@ -102,7 +113,7 @@ namespace KioskAPI.Services
         public async Task<bool> ValidateRefreshToken(User user, string refreshToken)
         {
             var token = await _context.RefreshTokens
-                .FirstOrDefaultAsync(t => t.Token == refreshToken && t.UserId == user.Id && !t.IsRevoked);
+                .SingleOrDefaultAsync(t => t.Token == refreshToken && t.UserId == user.Id && !t.IsRevoked);
             return token != null && token.ExpiryDate > DateTime.UtcNow;
         }
 
@@ -110,7 +121,7 @@ namespace KioskAPI.Services
         public async Task RevokeRefreshToken(User user, string refreshToken)
         {
             var token = await _context.RefreshTokens
-                .FirstOrDefaultAsync(t => t.Token == refreshToken && t.UserId == user.Id);
+                .SingleOrDefaultAsync(t => t.Token == refreshToken && t.UserId == user.Id);
             if (token != null)
             {
                 token.IsRevoked = true;
@@ -122,9 +133,11 @@ namespace KioskAPI.Services
         public async Task<User?> GetUserByRefreshToken(string refreshToken)
         {
             var token = await _context.RefreshTokens.Include(rt => rt.User)
-                                                     .FirstOrDefaultAsync(rt => rt.Token == refreshToken && !rt.IsRevoked);
+                                                     .SingleOrDefaultAsync(rt => rt.Token == refreshToken && !rt.IsRevoked);
 
             return token?.User;
         }
     }
+
 }
+

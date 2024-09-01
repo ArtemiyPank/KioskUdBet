@@ -1,17 +1,25 @@
-﻿using KioskAPI.Models;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-public class RefreshToken
+namespace KioskAPI.Models
 {
-    public int Id { get; set; }
-    public string Token { get; set; }
-    public DateTime ExpiryDate { get; set; } 
-    public bool IsRevoked { get; set; }
-    public DateTime Created { get; set; }
-    public bool IsExpired => DateTime.UtcNow >= ExpiryDate;
-    public bool IsActive => !IsRevoked && !IsExpired;
+    public class RefreshToken
+    {
+        [Key]
+        public int Id { get; set; }
 
-    // Внешний ключ к таблице пользователей
-    public int UserId { get; set; }
-    public User User { get; set; }
+        [ForeignKey("User")]
+        public int UserId { get; set; }
+
+        public string Token { get; set; }
+        public DateTime ExpiryDate { get; set; }
+        public bool IsRevoked { get; set; }
+        public DateTime Created { get; set; }
+        public bool IsExpired => DateTime.UtcNow >= ExpiryDate;
+        public bool IsActive => !IsRevoked && !IsExpired;
+
+        // Связь с User
+        public User User { get; set; }
+    }
 }
-

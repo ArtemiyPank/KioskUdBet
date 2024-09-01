@@ -30,14 +30,12 @@ namespace KioskAPI.Data
                 .WithMany() // Предполагается, что у Product может быть много OrderItems
                 .HasForeignKey(oi => oi.ProductId);
 
-            // Настройка связи один-к-одному между User и RefreshToken
-            modelBuilder.Entity<RefreshToken>()
-                .HasKey(rt => rt.Id); // Установка Id как первичного ключа
-
-            modelBuilder.Entity<RefreshToken>()
-                .HasOne(rt => rt.User)
-                .WithOne(u => u.RefreshToken)
-                .HasForeignKey<RefreshToken>(rt => rt.UserId); // Определение внешнего ключа и связи один-к-одному между User и RefreshToken
+            // Настройка связи между User и RefreshToken
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.RefreshToken)
+                .WithOne(rt => rt.User)
+                .HasForeignKey<RefreshToken>(rt => rt.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
