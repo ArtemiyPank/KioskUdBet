@@ -72,8 +72,6 @@ namespace KioskApp.ViewModels
                 Debug.WriteLine($"Authenticated User in LoginViewModel: {authResponse.Data.Email}");
                 await Shell.Current.GoToAsync(".."); // Navigate to previous page (ProfilePage)
 
-                MessagingCenter.Send(this, "UpdateUserState");
-
                 return true;
             }
             else
@@ -88,13 +86,6 @@ namespace KioskApp.ViewModels
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-
-
-        //private async void OnNavigateToRegister()
-        //{
-        //    await Shell.Current.GoToAsync(nameof(RegisterPage));
-        //}
-
 
 
         private async void OnNavigateToRegister()

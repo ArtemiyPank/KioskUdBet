@@ -38,6 +38,8 @@ namespace KioskApp
 
             MainPage = new AppShell();
 
+
+
             CheckSavedToken();
         }
 
@@ -61,7 +63,7 @@ namespace KioskApp
                     if (user != null)
                     {
                         userService.SetCurrentUser(user);
-                        MessagingCenter.Send(this, "UpdateUserState");
+                        MessagingCenter.Send(this, "UserStateChanged");
                         Debug.WriteLine($"Token validated. Current User: {user.Email}");
                     }
                     else

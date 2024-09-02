@@ -19,7 +19,7 @@ namespace KioskApp.Views
             else
             {
                 Debug.WriteLine("timeRangeSlider is null.");
-            }
+            } 
 
             BindingContext = viewModel;
         }

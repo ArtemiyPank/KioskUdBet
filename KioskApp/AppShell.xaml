@@ -6,14 +6,21 @@
     x:Class="KioskApp.AppShell">
 
     <TabBar>
-        <Tab Title="Profile">
+        <Tab Title="Profile" Icon="profile_icon.png">
             <ShellContent ContentTemplate="{DataTemplate local:ProfilePage}" />
         </Tab>
         <Tab Title="Products">
             <ShellContent ContentTemplate="{DataTemplate local:ProductsPage}" />
         </Tab>
-        <Tab Title="Cart">
+        
+        
+        <Tab x:Name="CartTab" Title="Cart" IsVisible="True">
             <ShellContent ContentTemplate="{DataTemplate local:CartPage}" />
         </Tab>
+
+        <Tab x:Name="OrdersTab" Title="Orders" IsVisible="False">
+            <ShellContent ContentTemplate="{DataTemplate local:OrdersPage}" />
+        </Tab>
+
     </TabBar>
 </Shell>

@@ -39,6 +39,8 @@ namespace KioskApp.Services
                 Data = response.User
             };
 
+            MessagingCenter.Send(this, "UserStateChanged"); // To update the main and product page
+
             return completeResponse;
         }
 
@@ -61,7 +63,9 @@ namespace KioskApp.Services
                 Message = response.Message,
                 Data = response.User
             };
-           
+
+            MessagingCenter.Send(this, "UserStateChanged"); // To update the main and product page
+
             return completeResponse;
         }
 
@@ -84,7 +88,11 @@ namespace KioskApp.Services
                 {
                     await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
                     Debug.WriteLine($"Authenticated User with token in UserService: {response.User.Email}");
+
+                    MessagingCenter.Send(this, "UserStateChanged"); // To update the main and product page
+
                     return response.User;
+
                 }
                 else
                 {
@@ -97,6 +105,15 @@ namespace KioskApp.Services
                 Debug.WriteLine($"Error in AuthenticateWithToken: {ex.Message}");
                 return null;
             }
+
+
+        }
+
+        public async Task Logout()
+        {
+            await ClearCurrentUserAsync();
+
+            MessagingCenter.Send(this, "UserStateChanged"); // To update the main and product page
         }
 
         public User GetCurrentUser()

@@ -21,7 +21,7 @@ namespace KioskApp.ViewModels
 
             UpdateUserState();
 
-            MessagingCenter.Subscribe<App>(this, "UpdateUserState", (sender) =>
+            MessagingCenter.Subscribe<App>(this, "UserStateChanged", (sender) =>
             {
                 UpdateUserState();
             });
@@ -47,11 +47,9 @@ namespace KioskApp.ViewModels
 
         private async void OnLogout()
         {
-            await _userService.ClearCurrentUserAsync();
+            await _userService.Logout();
 
             UpdateUserState();
-            MessagingCenter.Send(this, "UserStateChanged"); // To update the product page
-
         }
 
         public void UpdateUserState()

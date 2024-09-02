@@ -13,5 +13,6 @@ namespace KioskApp.Services
         User GetCurrentUser();
         void SetCurrentUser(User user);
         Task ClearCurrentUserAsync();
+        Task Logout();
     }
 }

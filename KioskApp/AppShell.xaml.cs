@@ -1,4 +1,5 @@
-﻿using KioskApp.ViewModels;
+﻿using KioskApp.Services;
+using KioskApp.ViewModels;
 using KioskApp.Views;
 using Microsoft.Maui.Controls;
 using System.Diagnostics;
@@ -7,10 +8,14 @@ namespace KioskApp
 {
     public partial class AppShell : Shell
     {
+        private readonly IUserService _userService;
+
+
         public AppShell()
         {
             InitializeComponent();
 
+            _userService = DependencyService.Get<IUserService>();
 
             // Register routes
             Routing.RegisterRoute(nameof(LoginPage), typeof(LoginPage));
@@ -22,20 +27,12 @@ namespace KioskApp
             Routing.RegisterRoute(nameof(OrdersPage), typeof(OrdersPage));
             Routing.RegisterRoute(nameof(CartPage), typeof(CartPage));
 
-            // Subscribe to messages
-            MessagingCenter.Subscribe<LoginViewModel>(this, "UpdateUserState", (sender) =>
-            {
-                UpdateProfilePage();
-            });
 
-            MessagingCenter.Subscribe<RegisterViewModel>(this, "UpdateUserState", (sender) =>
+            MessagingCenter.Subscribe<UserService>(this, "UserStateChanged", (sender) =>
             {
+                Debug.WriteLine("UserService UserStateChanged");
                 UpdateProfilePage();
-            });
-
-            MessagingCenter.Subscribe<ProfileViewModel>(this, "UpdateUserState", (sender) =>
-            {
-                UpdateProfilePage();
+                UpdateTabsBasedOnUserRole();
             });
         }
 
@@ -50,5 +47,31 @@ namespace KioskApp
             }
             MessagingCenter.Send(this, "UserStateChanged"); // To update the product page
         }
+
+
+
+
+        private void UpdateTabsBasedOnUserRole()
+        {
+            var currentUser = _userService.GetCurrentUser();
+
+            if (currentUser?.Role == "Admin")
+            {
+                CartTab.IsVisible = false;
+                OrdersTab.IsVisible = true;
+            }
+            else
+            {
+                CartTab.IsVisible = true;
+                OrdersTab.IsVisible = false;
+            }
+        }
+
+
+
+
     }
+
 }
+
+

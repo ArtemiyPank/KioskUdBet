@@ -132,7 +132,6 @@ namespace KioskApp.ViewModels
             {
                 Debug.WriteLine($"Registration User in RegistrationViewModel: {registeredResponse.Data.Email}");
                 await Shell.Current.GoToAsync("..");
-                MessagingCenter.Send(this, "UpdateUserState");
                 return true;
             }
             else
