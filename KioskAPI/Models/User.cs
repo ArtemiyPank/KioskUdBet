@@ -1,10 +1,15 @@
-﻿namespace KioskAPI.Models
+﻿using System.Text.Json.Serialization;
+
+namespace KioskAPI.Models
 {
     public class User
     {
         public int Id { get; set; }
-        public string? Email { get; set; }
+        public string Email { get; set; }
+
+        [JsonIgnore]
         public string? PasswordHash { get; set; }
+
         public string Language { get; set; } // "English" / "Russian" / "Hebrew"
         public string FirstName { get; set; }
         public string LastName { get; set; }
@@ -12,7 +17,10 @@
         public string RoomNumber { get; set; }
         public string Role { get; set; } = "User"; // "User" / "Admin" / "SuperAdmin"
 
+        [JsonIgnore]
         public string? Salt { get; set; }
+
+        [JsonIgnore]
         public RefreshToken? RefreshToken { get; set; }
 
         public override string ToString()

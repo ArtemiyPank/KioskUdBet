@@ -1,18 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:viewmodels="clr-namespace:KioskApp.ViewModels"
-             x:Class="KioskApp.Views.OrdersPage">
+             xmlns:vm="clr-namespace:KioskApp.ViewModels"
+             x:Class="KioskApp.Views.OrdersPage"
+             Title="Orders">
 
-    <StackLayout Padding="10">
-        <CollectionView ItemsSource="{Binding Orders}">
-            <CollectionView.ItemTemplate>
+    <StackLayout>
+        <ListView ItemsSource="{Binding Orders}" HasUnevenRows="True">
+            <ListView.ItemTemplate>
                 <DataTemplate>
-                    <Grid Padding="10">
-                        <Label Text="{Binding Id}" FontSize="Medium" />
-                        <Label Text="{Binding Status}" FontSize="Small" HorizontalOptions="EndAndExpand" />
-                    </Grid>
+                    <ViewCell>
+                        <StackLayout Padding="10">
+                            <Label Text="Order Details" FontSize="Medium" FontAttributes="Bold" />
+                            <Label Text="{Binding User.FirstName}" FontSize="Small" />
+                            <Label Text="{Binding User.LastName}" FontSize="Small" />
+                            <Label Text="{Binding Building}" FontSize="Small" />
+                            <Label Text="{Binding RoomNumber}" FontSize="Small" />
+                            <Label Text="{Binding DeliveryStartTime, StringFormat='Delivery: {0:HH:mm} - {1:HH:mm}'}" FontSize="Small" />
+                            <Label Text="Order Items:" FontSize="Medium" FontAttributes="Bold" />
+
+                            <ListView ItemsSource="{Binding OrderItems}" HasUnevenRows="True">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <ViewCell>
+                                            <StackLayout Padding="5">
+                                                <Label Text="{Binding Product.Name}" FontSize="Small" />
+                                                <Label Text="{Binding Quantity, StringFormat='Quantity: {0}'}" FontSize="Small" />
+                                                <Label Text="{Binding Product.Price, StringFormat='Price: {0:C}'}" FontSize="Small" />
+                                            </StackLayout>
+                                        </ViewCell>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+
+                            <Button Text="Update Status" Command="{Binding BindingContext.UpdateOrderStatusCommand, Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}}" CommandParameter="{Binding .}" />
+                        </StackLayout>
+                    </ViewCell>
                 </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+            </ListView.ItemTemplate>
+        </ListView>
     </StackLayout>
 </ContentPage>

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 namespace KioskApp.Models;
 
@@ -14,7 +15,8 @@ public class Product
     public bool IsHidden { get; set; } = false;
     public DateTime LastUpdated { get; set; }
 
-    public string VisibilityIsHiddenText => IsHidden ? "Show" : "Hide";
+    [JsonIgnore]
+    public string? VisibilityIsHiddenText => IsHidden ? "Show" : "Hide";
 
     public override string ToString()
     {

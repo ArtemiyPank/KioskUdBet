@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace KioskAPI.Models
 {
@@ -8,7 +9,7 @@ namespace KioskAPI.Models
         [Key]
         public int Id { get; set; }
 
-        [ForeignKey("Order")]
+        [ForeignKey("Order"), JsonIgnore]
         public int OrderId { get; set; } // Связь с Order через внешний ключ
 
         public int ProductId { get; set; }

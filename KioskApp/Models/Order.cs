@@ -18,6 +18,7 @@ namespace KioskApp.Models
         public string RoomNumber { get; set; }
         public DateTime DeliveryStartTime { get; set; }
         public DateTime DeliveryEndTime { get; set; }
+        public string Status { get; set; } = "Placed"; // Статус заказа по умолчанию - "Оформлен"
 
         // Перечисление возможных статусов заказа
         //public enum OrderStatus
@@ -27,7 +28,6 @@ namespace KioskApp.Models
         //    Delivered  // Доставлен
         //}
         //public OrderStatus Status { get; set; } = OrderStatus.Placed; // Статус заказа по умолчанию - "Оформлен"
-        public string Status { get; set; } = "Placed"; // Статус заказа по умолчанию - "Оформлен"
 
 
         public Order() { }

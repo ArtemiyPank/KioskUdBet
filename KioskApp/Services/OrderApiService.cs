@@ -45,12 +45,14 @@ namespace KioskApp.Services
                 return new HttpRequestMessage(HttpMethod.Get, "api/order");
             });
 
+            Debug.WriteLine(response.ToString());
+
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<List<Order>>();
         }
 
         public async Task<Order> GetOrderById(int orderId)
-        {
+        { 
             var response = await _userApiService.SendRequestAsync(() =>
             {
                 return new HttpRequestMessage(HttpMethod.Get, $"api/order/{orderId}");
@@ -73,11 +75,7 @@ namespace KioskApp.Services
             return response.IsSuccessStatusCode;
         }
 
-        public Task<bool> UpdateOrderStatus(Order order)
-        {
-            throw new NotImplementedException();
-        }
-
+        
         public Task<bool> UpdateOrder(Order order)
         {
             throw new NotImplementedException();

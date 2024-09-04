@@ -7,33 +7,6 @@ using System.Threading.Tasks;
 namespace KioskAPI.Controllers
 {
 
-    public class TestData()
-    {
-        public string str { get; set; }
-        public int num { get; set; }
-        public List<int> lst { get; set; }
-        public User User { get; set; }
-
-
-
-        public override string ToString()
-        {
-            string data = 
-                 $"\nstr - {str} \n" +
-                   $"num - {num} \n";
-
-            data += "data - [";
-            foreach (var item in lst)
-            {
-                data += $"{item} ";
-            }
-            data += "]\n";
-
-            data += $"-----User----- \n{User.ToString()} \n";
-            return data;
-        }
-    }
-
     [ApiController]
     [Route("api/[controller]")]
     public class OrderController : ControllerBase
@@ -46,19 +19,6 @@ namespace KioskAPI.Controllers
             _orderService = orderService;
             _logger = logger;
         }
-
-
-        [HttpPost("testRequest")]
-        public async void testRequest([FromBody] TestData data)
-        {
-            _logger.LogInformation("TestStart");
-
-            _logger.LogInformation(data.ToString());
-            
-            _logger.LogInformation("TestEnd");
-        }
-
-
 
 
         // POST: api/order/placeOrder

@@ -9,7 +9,7 @@ namespace KioskApp.Services
         Task<Order> PlaceOrder(Order order);
         Task<List<Order>> GetOrders();
         Task<Order> GetOrderById(int orderId);
-        Task<bool> UpdateOrderStatus(Order order);
+        Task<bool> UpdateOrderStatus(int orderId, string status);
         Task<bool> UpdateOrder(Order order);
     }
 }

@@ -32,8 +32,13 @@ namespace KioskAPI.Services
 
         public async Task<Order> GetOrderByIdAsync(int id)
         {
-            return await _context.Orders.FindAsync(id);
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                .Include(o => o.User)
+                .FirstOrDefaultAsync(o => o.Id == id);
         }
+
 
         public async Task UpdateOrderStatusAsync(int id, string status)
         {
@@ -47,7 +52,11 @@ namespace KioskAPI.Services
 
         public async Task<List<Order>> GetAllOrdersAsync()
         {
-            return await _context.Orders.ToListAsync();
+            return await _context.Orders
+                .Include(o => o.OrderItems) // Loading order items
+                .ThenInclude(oi => oi.Product) // Loading products for each order item
+                .Include(o => o.User) // Uploading user information
+                .ToListAsync();
         }
     }
 }

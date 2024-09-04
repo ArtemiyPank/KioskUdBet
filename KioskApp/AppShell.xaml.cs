@@ -25,12 +25,13 @@ namespace KioskApp
             Routing.RegisterRoute(nameof(AddProductPage), typeof(AddProductPage));
             Routing.RegisterRoute(nameof(EditProductPage), typeof(EditProductPage));
             Routing.RegisterRoute(nameof(OrdersPage), typeof(OrdersPage));
+
             Routing.RegisterRoute(nameof(CartPage), typeof(CartPage));
 
 
             MessagingCenter.Subscribe<UserService>(this, "UserStateChanged", (sender) =>
             {
-                Debug.WriteLine("UserService UserStateChanged");
+                Debug.WriteLine("UserService \"UserStateChanged\"");
                 UpdateProfilePage();
                 UpdateTabsBasedOnUserRole();
             });

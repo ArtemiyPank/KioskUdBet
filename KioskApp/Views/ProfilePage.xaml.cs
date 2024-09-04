@@ -10,8 +10,9 @@ namespace KioskApp.Views
             InitializeComponent();
             BindingContext = new ProfileViewModel();
 
-            MessagingCenter.Subscribe<ProfileViewModel>(this, "UserStateChanged", (sender) =>
+            MessagingCenter.Subscribe<AppShell>(this, "UserStateChanged", (sender) =>
             {
+
                 BindingContext = new ProfileViewModel();
             });
         }
