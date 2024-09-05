@@ -77,14 +77,7 @@ namespace KioskApp.ViewModels
                 await LoadProducts();
             });
 
-            // Loading products when user logs out of account
-            MessagingCenter.Subscribe<UserService>(this, "UserStateChanged", async (sender) =>
-            {
-                OnPropertyChanged(nameof(IsAdmin));
-                await LoadProducts();
-            });
-
-            // Loading products when user logs in or registers an account
+            // Loading products when user registers, logs in or logs out of account
             MessagingCenter.Subscribe<AppShell>(this, "UserStateChanged", async (sender) =>
             {
                 OnPropertyChanged(nameof(IsAdmin));
