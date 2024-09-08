@@ -50,7 +50,9 @@ namespace KioskApp.ViewModels
                 if (!Validate()) return;
 
                 NewProduct.ImageUrl = "";
+
                 await _productApiService.AddProduct(NewProduct, _imageStream, _imageName);
+
                 NewProduct = new Product(); // Очистка формы после добавления продукта
                 _imageStream?.Dispose(); // Закрытие потока после использования
                 _imageStream = null; // Сброс переменной после использования

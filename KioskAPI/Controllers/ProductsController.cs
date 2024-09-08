@@ -54,12 +54,13 @@ namespace KioskAPI.Controllers
             try
             {
                 _logger.LogInformation("Adding a new product.");
-                _logger.LogInformation($"Product name: {product.Name}");
-                _logger.LogInformation($"Product description: {product.Description}");
-                _logger.LogInformation($"Product price: {product.Price}");
-                _logger.LogInformation($"Product stock: {product.Stock}");
-                _logger.LogInformation($"Product category: {product.Category}");
-                _logger.LogInformation($"Product last updated: {product.LastUpdated}");
+                _logger.LogInformation($"Product ID: {product.Id} \n" +
+                    $"Product name: {product.Name} \n" +
+                    $"Product description: {product.Description} \n" +
+                    $"Product price: {product.Price} \n" +
+                    $"Product stock: {product.Stock} \n" +
+                    $"Product category: {product.Category} \n" +
+                    $"Product last updated: {product.LastUpdated} \n");
 
                 // Сохраняем продукт сначала, чтобы получить его ID
                 var newProduct = await _productService.AddProduct(product);
@@ -69,7 +70,7 @@ namespace KioskAPI.Controllers
                     _logger.LogInformation($"Received image with length: {image.Length}");
 
                     // Генерируем новое имя файла
-                    var newFileName = $"{newProduct.Name}_{newProduct.Category}_{newProduct.Id}.jpg";
+                    var newFileName = $"product_{newProduct.Id}.jpg";
                     var imagePath = Path.Combine("wwwroot/images", newFileName);
 
                     using (var stream = new FileStream(imagePath, FileMode.Create))
@@ -106,13 +107,14 @@ namespace KioskAPI.Controllers
                 }
 
                 _logger.LogInformation("Updating product.");
-                _logger.LogInformation($"Product ID: {product.Id}");
-                _logger.LogInformation($"Product name: {product.Name}");
-                _logger.LogInformation($"Product description: {product.Description}");
-                _logger.LogInformation($"Product price: {product.Price}");
-                _logger.LogInformation($"Product stock: {product.Stock}");
-                _logger.LogInformation($"Product category: {product.Category}");
-                _logger.LogInformation($"Product last updated: {product.LastUpdated}");
+                _logger.LogInformation($"Product ID: {product.Id} \n" +
+                    $"Product name: {product.Name} \n" +
+                    $"Product description: {product.Description} \n" +
+                    $"Product price: {product.Price} \n" +
+                    $"Product stock: {product.Stock} \n" +
+                    $"Product category: {product.Category} \n" +
+                    $"Product last updated: {product.LastUpdated} \n");
+
 
                 // Получаем существующий продукт без отслеживания
                 var existingProduct = await _productService.GetProductByIdAsync(id);
@@ -137,7 +139,7 @@ namespace KioskAPI.Controllers
                     _logger.LogInformation($"Received image with length: {image.Length}");
 
                     // Генерируем новое имя файла
-                    var newFileName = $"{existingProduct.Name}_{existingProduct.Category}_{existingProduct.Id}.jpg";
+                    var newFileName = $"product_{existingProduct.Id}.jpg";
                     var imagePath = Path.Combine("wwwroot/images", newFileName);
 
                     using (var stream = new FileStream(imagePath, FileMode.Create))

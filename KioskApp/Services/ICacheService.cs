@@ -1,7 +1,4 @@
 ﻿using KioskApp.Models;
-using System.IO;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace KioskApp.Services
 {
@@ -9,10 +6,11 @@ namespace KioskApp.Services
     {
         Task SaveProductAsync(Product product, Stream imageStream);
         Task<Product> GetProductAsync(int productId);
-        string GetProductImagePath(int productId);
+        Task<string> GetProductImagePath(int productId);
         void ClearCache();
         Task DeleteProduct(int productId);
         List<int> GetCachedProductIds();
         Task LogProductCache();
+        void PrintCacheDirectoryStructure(string? directoryPath = null, string indent = "");
     }
 }

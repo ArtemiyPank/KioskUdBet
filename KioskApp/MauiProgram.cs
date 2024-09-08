@@ -31,7 +31,9 @@ public static class MauiProgram
         };
         var httpClient = new HttpClient(httpClientHandler)
         {
-            BaseAddress = new Uri("https://10.0.2.2:7074")
+            BaseAddress = new Uri("https://10.0.2.2:7074") // for emulator
+            //BaseAddress = new Uri("http://10.114.64.23:4074")
+
         };
         // Register HttpClient and global state
         builder.Services.AddSingleton(httpClient);

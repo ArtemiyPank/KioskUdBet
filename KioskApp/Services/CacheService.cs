@@ -23,19 +23,36 @@ namespace KioskApp.Services
         {
             try
             {
-                // Сохранение данных товара
-                var productFilePath = Path.Combine(_cacheDirectory, $"{product.Id}.json");
-                var productJson = JsonSerializer.Serialize(product);
-                await File.WriteAllTextAsync(productFilePath, productJson);
+                // Находим все файлы с расширением .jpg, которые начинаются с product_{product.Id}
+                var filesToDelete = Directory.GetFiles(_cacheDirectory, $"product_{product.Id}*.jpg");
 
-                // Сохранение изображения товара
-                var imageFilePath = Path.Combine(_cacheDirectory, $"{product.Id}.jpg");
+                foreach (var file in filesToDelete)
+                {
+                    Debug.WriteLine($"Deleting previous image: {file}");
+                    File.Delete(file); 
+                }
+
+
+                // Генерация уникального имени для изображения
+                var imageFileName = $"product_{product.Id}_{DateTime.UtcNow.Ticks}.jpg"; // Метка времени добавлена для уникальности
+                var imageFilePath = Path.Combine(_cacheDirectory, imageFileName);
+
+                // Сохраняем новое изображение
                 using (var fileStream = new FileStream(imageFilePath, FileMode.Create, FileAccess.Write))
                 {
                     await imageStream.CopyToAsync(fileStream);
                 }
 
-                Debug.WriteLine($"Product {product.Id} cached successfully.");
+                // Обновляем URL изображения продукта
+                product.ImageUrl = imageFileName; // Изменяем ImageUrl, чтобы хранить новое имя изображения
+
+
+                // Сохранение данных товара
+                var productFilePath = Path.Combine(_cacheDirectory, $"product_{product.Id}.json");
+                var productJson = JsonSerializer.Serialize(product);
+                await File.WriteAllTextAsync(productFilePath, productJson);
+
+                Debug.WriteLine($"Product {product.Id} cached successfully with new image.");
             }
             catch (Exception ex)
             {
@@ -44,11 +61,12 @@ namespace KioskApp.Services
             }
         }
 
+
         public async Task<Product> GetProductAsync(int productId)
         {
             try
             {
-                var productFilePath = Path.Combine(_cacheDirectory, $"{productId}.json");
+                var productFilePath = Path.Combine(_cacheDirectory, $"product_{productId}.json");
                 if (File.Exists(productFilePath))
                 {
                     var productJson = await File.ReadAllTextAsync(productFilePath);
@@ -63,11 +81,12 @@ namespace KioskApp.Services
             return null;
         }
 
-        public string GetProductImagePath(int productId)
+        public async Task<string> GetProductImagePath(int productId)
         {
             try
             {
-                var imageFilePath = Path.Combine(_cacheDirectory, $"{productId}.jpg");
+                var product = await GetProductAsync(productId);
+                var imageFilePath = Path.Combine(_cacheDirectory, product.ImageUrl);
                 return File.Exists(imageFilePath) ? imageFilePath : null;
             }
             catch (Exception ex)
@@ -103,8 +122,8 @@ namespace KioskApp.Services
         {
             try
             {
-                var productFilePath = Path.Combine(_cacheDirectory, $"{productId}.json");
-                var imageFilePath = Path.Combine(_cacheDirectory, $"{productId}.jpg");
+                var productFilePath = Path.Combine(_cacheDirectory, $"product_{productId}.json");
+                var imageFilePath = Path.Combine(_cacheDirectory, $"product_{productId}.jpg");
 
                 if (File.Exists(productFilePath))
                 {
@@ -127,9 +146,12 @@ namespace KioskApp.Services
         {
             return Directory.GetFiles(_cacheDirectory, "*.json")
                             .Select(Path.GetFileNameWithoutExtension)
-                            .Select(int.Parse)
+                            .Where(fileName => fileName.StartsWith("product_")) // Фильтруем файлы с префиксом "product_"
+                            .Select(fileName => fileName.Replace("product_", "")) // Убираем префикс "product_"
+                            .Select(int.Parse) // Преобразуем оставшуюся часть в число
                             .ToList();
         }
+
 
 
         public async Task LogProductCache()
@@ -157,5 +179,35 @@ namespace KioskApp.Services
 
             Debug.WriteLine("===================================================================================");
         }
+
+        public void PrintCacheDirectoryStructure(string? directoryPath = null, string indent = "")
+        {
+            try
+            {
+                if (directoryPath == null) directoryPath = _cacheDirectory;
+
+                var files = Directory.GetFiles(directoryPath);
+                var directories = Directory.GetDirectories(directoryPath);
+
+                // Выводим файлы
+                foreach (var file in files)
+                {
+                    Debug.WriteLine($"{indent}├── {Path.GetFileName(file)}");
+                }
+
+                // Выводим папки
+                foreach (var dir in directories)
+                {
+                    Debug.WriteLine($"{indent}└── {Path.GetFileName(dir)}");
+                    
+                    PrintCacheDirectoryStructure(dir, indent + "    ");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error accessing directory {directoryPath}: {ex.Message}");
+            }
+        }
+
     }
 }

@@ -44,6 +44,7 @@ namespace KioskApp.ViewModels
             _userService = userService;
             _cacheService = cacheService;
             _cartViewModel = cartViewModel;
+
             Debug.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
             if (_cartViewModel == null)
             {
@@ -106,18 +107,19 @@ namespace KioskApp.ViewModels
                     var cachedProduct = await _cacheService.GetProductAsync(product.Id);
                     if (cachedProduct != null)
                     {
+                        // Если изменился дата последнего обновления
                         if (cachedProduct.LastUpdated != product.LastUpdated)
                         {
                             var imageStream = await _productApiService.DownloadProductImage(product.ImageUrl);
                             await _cacheService.SaveProductAsync(product, imageStream);
                         }
-                        product.ImageUrl = _cacheService.GetProductImagePath(product.Id);
+                        product.ImageUrl = await _cacheService.GetProductImagePath(product.Id);
                     }
                     else
                     {
                         var imageStream = await _productApiService.DownloadProductImage(product.ImageUrl);
                         await _cacheService.SaveProductAsync(product, imageStream);
-                        product.ImageUrl = _cacheService.GetProductImagePath(product.Id);
+                        product.ImageUrl = await _cacheService.GetProductImagePath(product.Id);
                     }
                     Products.Add(product);
                 }
@@ -126,6 +128,9 @@ namespace KioskApp.ViewModels
                 {
                     await _cacheService.DeleteProduct(productId);
                 }
+
+                _cacheService.PrintCacheDirectoryStructure(); // печать структуры папки кэша
+
             }
             catch (Exception ex)
             {

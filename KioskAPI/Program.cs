@@ -90,12 +90,16 @@ app.UseRequestLocalization(localizationOptions);
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
+
+
+    app.UseHsts(); // отключить при использовании http
 }
 
-app.UseHttpsRedirection();
+app.UseHttpsRedirection(); // отключить при использовании http
 
 app.UseStaticFiles(); // Позволяет серверу обслуживать статические файлы из папки wwwroot
+
+app.UseCors("AllowAll");
 
 app.UseRouting();
 

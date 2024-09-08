@@ -7,7 +7,7 @@
              x:Name="productsPage">
 
     <ScrollView>
-        <StackLayout Padding="10">
+        <StackLayout Padding="10" HorizontalOptions="Center">
             <Button Text="Add Product" Command="{Binding NavigateToAddProductCommand}">
                 <Button.Triggers>
                     <DataTrigger TargetType="Button" Binding="{Binding IsAdmin}" Value="False">

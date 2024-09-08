@@ -85,12 +85,11 @@ namespace KioskApp.ViewModels
 
             try
             {
-                if (_imageStream != null)
-                {
-                    Product.ImageUrl = "";
-                }
+                product.LastUpdated = DateTime.Now;
 
                 await _productApiService.UpdateProduct(Product, _imageStream, _imageName);
+                _imageStream?.Dispose(); // Закрытие потока после использования
+                _imageStream = null; // Сброс переменной после использования
 
                 // Отправка сообщения об обновлении продуктов
                 MessagingCenter.Send(this, "ProductUpdated");
