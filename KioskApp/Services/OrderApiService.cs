@@ -52,7 +52,7 @@ namespace KioskApp.Services
         }
 
         public async Task<Order> GetOrderById(int orderId)
-        { 
+        {
             var response = await _userApiService.SendRequestAsync(() =>
             {
                 return new HttpRequestMessage(HttpMethod.Get, $"api/order/{orderId}");
@@ -75,7 +75,32 @@ namespace KioskApp.Services
             return response.IsSuccessStatusCode;
         }
 
-        
+
+        public async Task<string> GetOrderStatus(int orderId)
+        {
+            try
+            {
+                var response = await _userApiService.SendRequestAsync(() =>
+                {
+                    return new HttpRequestMessage(HttpMethod.Get, $"api/order/getOrderStatus/{orderId}");
+                });
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadAsStringAsync();
+                }
+                else
+                {
+                    throw new Exception("Failed to fetch order status from the server.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error fetching order status: {ex.Message}");
+                throw;
+            }
+        }
+
         public Task<bool> UpdateOrder(Order order)
         {
             throw new NotImplementedException();

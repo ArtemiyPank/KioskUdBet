@@ -6,5 +6,6 @@ namespace KioskApp.Helpers
     {
         public User? CurrentUser { get; set; } = null;
         public string? AccessToken { get; set; } = null;
+        public bool? IsOrderPlaced { get; set; } = null;
     }
 }

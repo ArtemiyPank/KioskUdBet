@@ -11,5 +11,6 @@ namespace KioskApp.Services
         Task<Order> GetOrderById(int orderId);
         Task<bool> UpdateOrderStatus(int orderId, string status);
         Task<bool> UpdateOrder(Order order);
+        Task<string> GetOrderStatus(int orderId);
     }
 }

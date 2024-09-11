@@ -1,5 +1,6 @@
 ﻿using KioskAPI.Models;
 using KioskAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
@@ -106,6 +107,22 @@ namespace KioskAPI.Controllers
                 });
             }
         }
+
+
+
+        [HttpGet("getOrderStatus/{orderId}")]
+        public async Task<IActionResult> GetOrderStatus(int orderId)
+        {
+            var order = await _orderService.GetOrderByIdAsync(orderId);
+            if (order == null)
+            {
+                return NotFound("Order not found");
+            }
+
+            return Ok(order.Status);
+        }
+
+
 
         // GET: api/order
         [HttpGet]

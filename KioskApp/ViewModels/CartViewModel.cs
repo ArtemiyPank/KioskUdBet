@@ -8,6 +8,8 @@ using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Syncfusion.Maui.ProgressBar;
+using System.Numerics;
 
 namespace KioskApp.ViewModels
 {
@@ -15,31 +17,61 @@ namespace KioskApp.ViewModels
     {
         private readonly IOrderApiService _orderApiService;
         private readonly IUserService _userService;
+        private readonly IUpdateService _updateService;
 
-        private DateTime _selectedStartTime;
-        private DateTime _selectedEndTime;
 
-        public CartViewModel(IOrderApiService orderApiService, IUserService userService)
+
+        // progressbar
+        private ObservableCollection<StepProgressBarItem> _stepProgressItem;
+        public ObservableCollection<StepProgressBarItem> StepProgressItem
         {
-            _orderApiService = orderApiService ?? throw new ArgumentNullException(nameof(orderApiService));
-            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-
-
-            NavigateToRegisterCommand = new Command(async () => await Shell.Current.GoToAsync("RegisterPage"));
-            PlaceOrderCommand = new Command(OnPlaceOrder);
-            AddToCartCommand = new Command<Product>(OnAddToCart);
-            IncreaseQuantityCommand = new Command<OrderItem>(OnIncreaseQuantity);
-            DecreaseQuantityCommand = new Command<OrderItem>(OnDecreaseQuantity);
-
-            CartItems = new ObservableCollection<OrderItem>();
-            LoadCartItems();
-
-            SelectedStartTime = new DateTime(2024, 8, 27, 18, 0, 0);
-            SelectedEndTime = new DateTime(2024, 8, 27, 19, 0, 0);
+            get
+            {
+                return _stepProgressItem;
+            }
+            set
+            {
+                _stepProgressItem = value;
+            }
         }
 
-        public string DeliveryLocation => $"{CurrentUser.Building}, Room {CurrentUser.RoomNumber}";
+        // Progress bar value: 0 - Order not placed, 1 - Placed, 2 - Assembling, 3 - Delivered
+        private int _orderStatusValue = 0;
+        public int OrderStatusValue
+        {
+            get => _orderStatusValue;
+            set
+            {
+                Debug.WriteLine("OrderStatusValue was changed");
 
+                _orderStatusValue = value;
+
+                OrderStatusProgress = (value == 3) ? 100 : 40;
+
+                var orderStatusJson = System.Text.Json.JsonSerializer.Serialize(value);
+                Preferences.Set("orderStatus", orderStatusJson);
+
+                OnPropertyChanged(nameof(OrderStatusValue));
+                OnPropertyChanged(nameof(IsOrderDelivered));
+            }
+        }
+
+        public bool IsOrderDelivered => (_orderStatusValue == 3);
+
+
+        private int _orderStatusProgress = 40;
+        public int OrderStatusProgress
+        {
+            get => _orderStatusProgress;
+            set
+            {
+                _orderStatusProgress = value;
+                OnPropertyChanged(nameof(OrderStatusProgress));
+            }
+        }
+
+
+        private DateTime _selectedStartTime;
         public DateTime SelectedStartTime
         {
             get => _selectedStartTime;
@@ -51,6 +83,7 @@ namespace KioskApp.ViewModels
             }
         }
 
+        private DateTime _selectedEndTime;
         public DateTime SelectedEndTime
         {
             get => _selectedEndTime;
@@ -62,10 +95,29 @@ namespace KioskApp.ViewModels
             }
         }
 
+        private bool _isOrderPlaced = false;
+        public bool IsOrderPlaced
+        {
+            get => _isOrderPlaced;
+            set
+            {
+                _isOrderPlaced = value;
+
+                OnPropertyChanged(nameof(IsOrderPlaced));
+                OnPropertyChanged(nameof(IsOrderNotPlaced));
+            }
+        }
+        public bool IsOrderNotPlaced => !IsOrderPlaced;
+
+
+        public string DeliveryLocation => $"{CurrentUser.Building}, Room {CurrentUser.RoomNumber}";
+
+        private int _orderId;
         public ObservableCollection<OrderItem> CartItems { get; set; }
 
         public ICommand NavigateToRegisterCommand { get; }
         public ICommand PlaceOrderCommand { get; }
+        public ICommand PrepareForTheNextOrderCommand { get; }
         public ICommand AddToCartCommand { get; }
         public ICommand IncreaseQuantityCommand { get; }
         public ICommand DecreaseQuantityCommand { get; }
@@ -75,6 +127,63 @@ namespace KioskApp.ViewModels
         public bool IsNotAuthenticated => !IsAuthenticated;
 
         public string SelectedTimeRangeText => $"Delivery time: {SelectedStartTime:HH:mm} - {SelectedEndTime:HH:mm}";
+
+
+
+        public CartViewModel(IOrderApiService orderApiService, IUserService userService, IUpdateService updateService)
+        {
+            _orderApiService = orderApiService ?? throw new ArgumentNullException(nameof(orderApiService));
+            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+            _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
+
+            NavigateToRegisterCommand = new Command(async () => await Shell.Current.GoToAsync("RegisterPage"));
+            PlaceOrderCommand = new Command(OnPlaceOrder);
+            PrepareForTheNextOrderCommand = new Command(PrepareForTheNextOrder);
+            AddToCartCommand = new Command<Product>(OnAddToCart);
+            IncreaseQuantityCommand = new Command<OrderItem>(OnIncreaseQuantity);
+            DecreaseQuantityCommand = new Command<OrderItem>(OnDecreaseQuantity);
+
+            CartItems = new ObservableCollection<OrderItem>();
+            LoadCartItems();
+
+
+            // range slider lables
+            SelectedStartTime = new DateTime(2024, 8, 27, 18, 0, 0);
+            SelectedEndTime = new DateTime(2024, 8, 27, 19, 0, 0);
+
+            // progress bar states 
+            _stepProgressItem = new ObservableCollection<StepProgressBarItem>();
+            _stepProgressItem.Add(new StepProgressBarItem() { PrimaryText = "Placed" });
+            _stepProgressItem.Add(new StepProgressBarItem() { PrimaryText = "Assembling" });
+            _stepProgressItem.Add(new StepProgressBarItem() { PrimaryText = "Delivered" });
+
+
+            var orderIdJson = Preferences.Get("OrderId", string.Empty);
+            if (!string.IsNullOrEmpty(orderIdJson))
+            {
+                _orderId = System.Text.Json.JsonSerializer.Deserialize<int>(orderIdJson);
+                IsOrderPlaced = true;
+                _updateService.StartMonitoringOrderStatus(_orderId, UpdateOrderStatus);
+            }
+
+            var orderStatusJson = Preferences.Get("orderStatus", string.Empty);
+            if (!string.IsNullOrEmpty(orderStatusJson))
+            {
+                OrderStatusValue = System.Text.Json.JsonSerializer.Deserialize<int>(orderStatusJson);
+            }
+        }
+
+
+
+        private void PrepareForTheNextOrder()
+        {
+            Debug.WriteLine("In PrepareForTheNextOrder");
+            CartItems.Clear();
+            OrderStatusValue = 0;
+            Preferences.Remove("CartItems");
+            Preferences.Remove("OrderId");
+            IsOrderPlaced = false;
+        }
 
         private void LoadCartItems()
         {
@@ -89,6 +198,10 @@ namespace KioskApp.ViewModels
 
         private void OnAddToCart(Product product)
         {
+            Debug.WriteLine($"_orderStatusValue - {_orderStatusValue}");
+
+            if (_orderStatusValue == 3) PrepareForTheNextOrder();
+
             var existingItem = CartItems.FirstOrDefault(c => c.ProductId == product.Id);
             if (existingItem != null)
             {
@@ -160,11 +273,43 @@ namespace KioskApp.ViewModels
 
             Debug.WriteLine(order.ToString());
 
-
-            await _orderApiService.PlaceOrder(order);
+            order = await _orderApiService.PlaceOrder(order);
             await Application.Current.MainPage.DisplayAlert("Order Placed", "Your order has been placed successfully!", "OK");
-            CartItems.Clear(); // Clear the cart after successful order
-            Preferences.Remove("CartItems"); // Remove cached cart data
+
+            IsOrderPlaced = true;
+            OrderStatusValue = 1; // (Order Placed)
+            _orderId = order.Id;
+
+            var orderJson = System.Text.Json.JsonSerializer.Serialize(_orderId);
+            Preferences.Set("OrderId", orderJson);
+
+            // launching update service
+            _updateService.StartMonitoringOrderStatus(_orderId, UpdateOrderStatus);
+
+
         }
+
+
+        private void UpdateOrderStatus(string status)
+        {
+            Debug.WriteLine("In UpdateOrderStatus");
+            switch (status)
+            {
+                case "Placed":
+                    OrderStatusValue = 1;
+                    break;
+                case "Assembling":
+                    Debug.WriteLine($"Assembling");
+                    OrderStatusValue = 2;
+                    break;
+                case "Delivered":
+                    Debug.WriteLine($"Delivered");
+                    OrderStatusValue = 3;
+                    _updateService.StopMonitoringOrderStatus(); // Остановить проверку после доставки
+                    break;
+            }
+
+        }
+
     }
 }
