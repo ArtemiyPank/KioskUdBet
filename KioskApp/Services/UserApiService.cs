@@ -25,7 +25,7 @@ namespace KioskApp.Services
         }
 
         // Метод для отправки запросов с автоматическим обновлением токенов
-        public async Task<HttpResponseMessage> SendRequestAsync(Func<HttpRequestMessage> createRequest)
+        public async Task<HttpResponseMessage> SendRequestAsync(Func<HttpRequestMessage> createRequest, bool isSseRequest = false)
         {
             if (_appState.CurrentUser != null)
             {
@@ -34,7 +34,8 @@ namespace KioskApp.Services
                 var request = createRequest();
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appState.AccessToken);
 
-                return await _httpClient.SendAsync(request);
+                if (!isSseRequest) return await _httpClient.SendAsync(request);
+                return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             }
 
             return await _httpClient.SendAsync(createRequest());

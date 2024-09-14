@@ -17,9 +17,9 @@ namespace KioskApp.ViewModels
     {
         private readonly IOrderApiService _orderApiService;
         private readonly IUserService _userService;
-        private readonly IUpdateService _updateService;
+        private readonly ISseService _sseService;
 
-
+        private CancellationTokenSource _cts; // токен для остановки мониторинга статуса заказа
 
         // progressbar
         private ObservableCollection<StepProgressBarItem> _stepProgressItem;
@@ -130,11 +130,11 @@ namespace KioskApp.ViewModels
 
 
 
-        public CartViewModel(IOrderApiService orderApiService, IUserService userService, IUpdateService updateService)
+        public CartViewModel(IOrderApiService orderApiService, IUserService userService, ISseService sseService)
         {
-            _orderApiService = orderApiService ?? throw new ArgumentNullException(nameof(orderApiService));
-            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-            _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
+            _orderApiService = orderApiService;
+            _userService = userService;
+            _sseService = sseService;
 
             NavigateToRegisterCommand = new Command(async () => await Shell.Current.GoToAsync("RegisterPage"));
             PlaceOrderCommand = new Command(OnPlaceOrder);
@@ -163,13 +163,34 @@ namespace KioskApp.ViewModels
             {
                 _orderId = System.Text.Json.JsonSerializer.Deserialize<int>(orderIdJson);
                 IsOrderPlaced = true;
-                _updateService.StartMonitoringOrderStatus(_orderId, UpdateOrderStatus);
+                StartMonitoringOrderStatus(_orderId);
             }
 
             var orderStatusJson = Preferences.Get("orderStatus", string.Empty);
             if (!string.IsNullOrEmpty(orderStatusJson))
             {
                 OrderStatusValue = System.Text.Json.JsonSerializer.Deserialize<int>(orderStatusJson);
+            }
+        }
+        // Запуск мониторинга статуса заказа через SSE
+        public void StartMonitoringOrderStatus(int orderId)
+        {
+            // Инициализация CancellationTokenSource
+            _cts = new CancellationTokenSource();
+
+            // Запуск мониторинга
+            _sseService.StartMonitoringOrderStatus(orderId, UpdateOrderStatus, _cts.Token);
+        }
+
+        // Остановка мониторинга статуса заказа
+        public void StopMonitoringOrderStatus()
+        {
+            if (_cts != null)
+            {
+                // Отмена задачи
+                _cts.Cancel();
+                _cts.Dispose();
+                _cts = null;
             }
         }
 
@@ -284,7 +305,7 @@ namespace KioskApp.ViewModels
             Preferences.Set("OrderId", orderJson);
 
             // launching update service
-            _updateService.StartMonitoringOrderStatus(_orderId, UpdateOrderStatus);
+            StartMonitoringOrderStatus(_orderId);
 
 
         }
@@ -305,7 +326,7 @@ namespace KioskApp.ViewModels
                 case "Delivered":
                     Debug.WriteLine($"Delivered");
                     OrderStatusValue = 3;
-                    _updateService.StopMonitoringOrderStatus(); // Остановить проверку после доставки
+                    StopMonitoringOrderStatus(); // Остановка мониторинга статуса заказа после его доставки
                     break;
             }
 

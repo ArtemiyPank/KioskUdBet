@@ -45,8 +45,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IProductApiService, ProductApiService>();
         builder.Services.AddSingleton<IOrderApiService, OrderApiService>();
         builder.Services.AddSingleton<IUserService, UserService>();
-        builder.Services.AddSingleton<ICacheService, CacheService>();
-        builder.Services.AddSingleton<IUpdateService, UpdateService>();
+        builder.Services.AddSingleton<ICacheService, CacheService>(); 
+        builder.Services.AddSingleton<ISseService, SseService>();
 
 
         // Register view models

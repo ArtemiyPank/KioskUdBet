@@ -6,7 +6,7 @@ namespace KioskApp.Services
 {
     public interface IUserApiService
     {
-        Task<HttpResponseMessage> SendRequestAsync(Func<HttpRequestMessage> createRequest);
+        Task<HttpResponseMessage> SendRequestAsync(Func<HttpRequestMessage> createRequest, bool isSseRequest = false);
 
         Task<AuthResponse> RegisterUser(User user);
         Task<AuthResponse> AuthenticateUser(string email, string password);

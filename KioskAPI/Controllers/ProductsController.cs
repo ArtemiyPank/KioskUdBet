@@ -123,6 +123,11 @@ namespace KioskAPI.Controllers
                     return NotFound("Product not found");
                 }
 
+                if (existingProduct.Stock != product.Stock)
+                {
+                    SseController.NotifyProductQuantityChanged(id, product.Stock.ToString());
+                }
+
                 // Копируем обновляемые свойства в существующий продукт
                 existingProduct.Name = product.Name;
                 existingProduct.Description = product.Description;
