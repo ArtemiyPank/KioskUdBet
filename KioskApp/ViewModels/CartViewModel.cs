@@ -19,6 +19,10 @@ namespace KioskApp.ViewModels
         private readonly IUserService _userService;
         private readonly ISseService _sseService;
 
+        private readonly IUpdateService _updateService;
+
+        private readonly IProductApiService _productApiService;
+
         private CancellationTokenSource _cts; // токен для остановки мониторинга статуса заказа
 
         // progressbar
@@ -130,11 +134,13 @@ namespace KioskApp.ViewModels
 
 
 
-        public CartViewModel(IOrderApiService orderApiService, IUserService userService, ISseService sseService)
+        public CartViewModel(IOrderApiService orderApiService, IUserService userService, ISseService sseService, IProductApiService productApiService, IUpdateService updateService)
         {
             _orderApiService = orderApiService;
             _userService = userService;
             _sseService = sseService;
+            _productApiService = productApiService;
+            _updateService = updateService;
 
             NavigateToRegisterCommand = new Command(async () => await Shell.Current.GoToAsync("RegisterPage"));
             PlaceOrderCommand = new Command(OnPlaceOrder);
@@ -163,7 +169,10 @@ namespace KioskApp.ViewModels
             {
                 _orderId = System.Text.Json.JsonSerializer.Deserialize<int>(orderIdJson);
                 IsOrderPlaced = true;
-                StartMonitoringOrderStatus(_orderId);
+
+                _updateService.StartMonitoringOrderStatus(_orderId, UpdateOrderStatus);
+
+                //StartMonitoringOrderStatus(_orderId);
             }
 
             var orderStatusJson = Preferences.Get("orderStatus", string.Empty);
@@ -172,27 +181,29 @@ namespace KioskApp.ViewModels
                 OrderStatusValue = System.Text.Json.JsonSerializer.Deserialize<int>(orderStatusJson);
             }
         }
-        // Запуск мониторинга статуса заказа через SSE
-        public void StartMonitoringOrderStatus(int orderId)
-        {
-            // Инициализация CancellationTokenSource
-            _cts = new CancellationTokenSource();
 
-            // Запуск мониторинга
-            _sseService.StartMonitoringOrderStatus(orderId, UpdateOrderStatus, _cts.Token);
-        }
 
-        // Остановка мониторинга статуса заказа
-        public void StopMonitoringOrderStatus()
-        {
-            if (_cts != null)
-            {
-                // Отмена задачи
-                _cts.Cancel();
-                _cts.Dispose();
-                _cts = null;
-            }
-        }
+        //// Запуск мониторинга статуса заказа через SSE
+        //public void StartMonitoringOrderStatus(int orderId)
+        //{
+        //    // Инициализация CancellationTokenSource
+        //    _cts = new CancellationTokenSource();
+
+        //    // Запуск мониторинга
+        //    _sseService.StartMonitoringOrderStatus(orderId, UpdateOrderStatus, _cts.Token);
+        //}
+
+        //// Остановка мониторинга статуса заказа
+        //public void StopMonitoringOrderStatus()
+        //{
+        //    if (_cts != null)
+        //    {
+        //        // Отмена задачи
+        //        _cts.Cancel();
+        //        _cts.Dispose();
+        //        _cts = null;
+        //    }
+        //}
 
 
 
@@ -217,53 +228,104 @@ namespace KioskApp.ViewModels
             }
         }
 
-        private void OnAddToCart(Product product)
+        private async void OnAddToCart(Product product)
         {
             Debug.WriteLine($"_orderStatusValue - {_orderStatusValue}");
 
             if (_orderStatusValue == 3) PrepareForTheNextOrder();
 
             var existingItem = CartItems.FirstOrDefault(c => c.ProductId == product.Id);
+
+            // Если товар уже есть в корзине, увеличиваем количество
             if (existingItem != null)
             {
-                existingItem.Quantity++;
+                if (product.Stock - product.ReservedStock > existingItem.Quantity)
+                {
+                    existingItem.Quantity++;
+                    await ReserveProductStockAsync(product.Id, 1); // Резервируем 1 единицу товара
+                }
+                else
+                {
+                    await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
+                }
             }
             else
             {
-                CartItems.Add(new OrderItem
+                if (product.Stock - product.ReservedStock > 0)
                 {
-                    ProductId = product.Id,
-                    Product = product,
-                    Quantity = 1
-                });
+                    CartItems.Add(new OrderItem
+                    {
+                        ProductId = product.Id,
+                        Product = product,
+                        Quantity = 1
+                    });
+                    await ReserveProductStockAsync(product.Id, 1); // Резервируем 1 единицу товара
+                }
+                else
+                {
+                    await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
+                }
             }
+
             OnPropertyChanged(nameof(CartItems));
             SaveCartItems();
         }
 
-        private void OnIncreaseQuantity(OrderItem item)
+
+        private async void OnIncreaseQuantity(OrderItem item)
         {
-            if (item.Product.Stock > item.Quantity)
+            if (item.Product.Stock - item.Product.ReservedStock > item.Quantity)
             {
                 item.Quantity++;
+                await ReserveProductStockAsync(item.Product.Id, 1); // Резервируем 1 единицу товара
             }
+            else
+            {
+                await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
+            }
+
             OnPropertyChanged(nameof(CartItems));
             SaveCartItems();
         }
 
-        private void OnDecreaseQuantity(OrderItem item)
+
+        private async void OnDecreaseQuantity(OrderItem item)
         {
             if (item.Quantity > 1)
             {
                 item.Quantity--;
+                await ReleaseProductStockAsync(item.Product.Id, 1); // Освобождаем 1 единицу товара
             }
             else
             {
                 CartItems.Remove(item);
+                await ReleaseProductStockAsync(item.Product.Id, item.Quantity); // Освобождаем все количество товара
             }
+
             OnPropertyChanged(nameof(CartItems));
             SaveCartItems();
         }
+
+        private async Task ReserveProductStockAsync(int productId, int quantity)
+        {
+            var response = await _productApiService.ReserveProductStock(productId, quantity);
+            if (!response.IsSuccessStatusCode)
+            {
+                Debug.WriteLine($"Failed to reserve stock for product {productId}");
+                await Application.Current.MainPage.DisplayAlert("Stock Error", "Failed to reserve stock", "OK");
+            }
+        }
+
+        private async Task ReleaseProductStockAsync(int productId, int quantity)
+        {
+            var response = await _productApiService.ReleaseProductStock(productId, quantity);
+            if (!response.IsSuccessStatusCode)
+            {
+                Debug.WriteLine($"Failed to release stock for product {productId}");
+                await Application.Current.MainPage.DisplayAlert("Stock Error", "Failed to release stock", "OK");
+            }
+        }
+
 
         private void SaveCartItems()
         {
@@ -304,10 +366,8 @@ namespace KioskApp.ViewModels
             var orderJson = System.Text.Json.JsonSerializer.Serialize(_orderId);
             Preferences.Set("OrderId", orderJson);
 
-            // launching update service
-            StartMonitoringOrderStatus(_orderId);
-
-
+            //// launching update service
+            //StartMonitoringOrderStatus(_orderId);
         }
 
 
@@ -326,7 +386,9 @@ namespace KioskApp.ViewModels
                 case "Delivered":
                     Debug.WriteLine($"Delivered");
                     OrderStatusValue = 3;
-                    StopMonitoringOrderStatus(); // Остановка мониторинга статуса заказа после его доставки
+
+                    _updateService.StopMonitoringOrderStatus();
+                    //StopMonitoringOrderStatus(); // Остановка мониторинга статуса заказа после его доставки
                     break;
             }
 

@@ -57,6 +57,7 @@ namespace KioskAPI.Services
             existingProduct.Description = product.Description;
             existingProduct.Price = product.Price;
             existingProduct.Stock = product.Stock;
+            existingProduct.ReservedStock = product.ReservedStock;
             existingProduct.Category = product.Category;
             existingProduct.LastUpdated = DateTime.UtcNow;
 
@@ -68,6 +69,54 @@ namespace KioskAPI.Services
             _context.Products.Update(existingProduct);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        // Резервирование товара
+        public async Task<int> ReserveProductStockAsync(int productId, int quantity)
+        {
+            var product = await _context.Products.FindAsync(productId);
+
+            if (product == null)
+            {
+                throw new Exception("Product not found.");
+            }
+
+            // Проверяем, достаточно ли товаров для резервирования
+            if (product.Stock < product.ReservedStock + quantity)
+            {
+                throw new Exception("Not enough stock available.");
+            }
+
+            // Резервируем товар
+            product.ReservedStock += quantity;
+            await _context.SaveChangesAsync();
+
+            // Возвращаем доступное количество товара
+            return product.Stock - product.ReservedStock;
+        }
+
+        // Освобождение товара
+        public async Task<int> ReleaseProductStockAsync(int productId, int quantity)
+        {
+            var product = await _context.Products.FindAsync(productId);
+
+            if (product == null)
+            {
+                throw new Exception("Product not found.");
+            }
+
+            // Проверяем, можно ли освободить товар
+            if (product.ReservedStock < quantity)
+            {
+                throw new Exception("Invalid release quantity.");
+            }
+
+            // Освобождаем товар
+            product.ReservedStock -= quantity;
+            await _context.SaveChangesAsync();
+
+            // Возвращаем доступное количество товара
+            return product.Stock - product.ReservedStock;
         }
 
 

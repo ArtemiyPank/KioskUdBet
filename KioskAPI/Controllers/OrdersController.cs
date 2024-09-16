@@ -92,10 +92,9 @@ namespace KioskAPI.Controllers
         {
             try
             {
-                _logger.LogInformation("Updating status of order with ID {OrderId} to {Status}.", id, status);
                 await _orderService.UpdateOrderStatusAsync(id, status);
                 _logger.LogInformation("Order with ID {OrderId} status updated to {Status}.", id, status);
-                SseController.NotifyOrderStatusChanged(id, status);
+                //SseController.NotifyOrderStatusChanged(id, status);
                 return NoContent();
             }
             catch (Exception ex)

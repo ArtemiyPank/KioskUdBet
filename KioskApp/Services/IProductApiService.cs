@@ -17,6 +17,9 @@ namespace KioskApp.Services
         Task<bool> UpdateProduct(Product product, Stream imageStream, string imageName);
         Task<bool> ToggleVisibility(int id);
 
+        Task<HttpResponseMessage> ReserveProductStock(int productId, int quantity);
+        Task<HttpResponseMessage> ReleaseProductStock(int productId, int quantity);
+
         Task<Order> PlaceOrder(Order order);
     }
 }

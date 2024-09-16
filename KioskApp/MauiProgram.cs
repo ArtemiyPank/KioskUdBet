@@ -47,6 +47,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IUserService, UserService>();
         builder.Services.AddSingleton<ICacheService, CacheService>(); 
         builder.Services.AddSingleton<ISseService, SseService>();
+        builder.Services.AddSingleton<IUpdateService, UpdateService>();
+
 
 
         // Register view models
@@ -58,6 +60,7 @@ public static class MauiProgram
         builder.Services.AddTransient<EditProductViewModel>();
         builder.Services.AddTransient<OrdersViewModel>();
         builder.Services.AddSingleton<CartViewModel>();
+
         // Register views
         builder.Services.AddTransient<ProfilePage>();
         builder.Services.AddTransient<LoginPage>();

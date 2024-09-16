@@ -18,6 +18,7 @@ namespace KioskApp.Services
         private readonly HttpClient _httpClient;
         private readonly IUserApiService _userApiService;
 
+
         public ProductApiService(HttpClient httpClient)
         {
             _httpClient = httpClient;
@@ -85,6 +86,7 @@ namespace KioskApp.Services
                     { new StringContent(product.Description ?? string.Empty), "Description" },
                     { new StringContent(product.Price?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty), "Price" },
                     { new StringContent(product.Stock?.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "Stock" },
+                    { new StringContent(product.ReservedStock.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "ReservedStock" },
                     { new StringContent(product.Category ?? string.Empty), "Category" },
                     { new StringContent(product.LastUpdated.ToString("o")), "LastUpdated" }
                 };
@@ -135,6 +137,7 @@ namespace KioskApp.Services
                     { new StringContent(product.Description ?? string.Empty), "Description" },
                     { new StringContent(product.Price?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty), "Price" },
                     { new StringContent(product.Stock?.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "Stock" },
+                    { new StringContent(product.ReservedStock.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "ReservedStock" },
                     { new StringContent(product.Category ?? string.Empty), "Category" },
                     { new StringContent(product.LastUpdated.ToString("o")), "LastUpdated" }
                 };
@@ -235,6 +238,45 @@ namespace KioskApp.Services
                 Debug.WriteLine($"Error placing order: {ex.Message}");
                 throw;
             }
+        }
+
+
+        // Резервирование товара
+        public async Task<HttpResponseMessage> ReserveProductStock(int productId, int quantity)
+        {
+            var requestBody = new
+            {
+                ProductId = productId,
+                Quantity = quantity
+            };
+
+            return await _userApiService.SendRequestAsync(() =>
+            {
+                var request = new HttpRequestMessage(HttpMethod.Post, "/api/products/reserve")
+                {
+                    Content = JsonContent.Create(requestBody)
+                };
+                return request;
+            });
+        }
+
+        // Освобождение товара
+        public async Task<HttpResponseMessage> ReleaseProductStock(int productId, int quantity)
+        {
+            var requestBody = new
+            {
+                ProductId = productId,
+                Quantity = quantity
+            };
+
+            return await _userApiService.SendRequestAsync(() =>
+            {
+                var request = new HttpRequestMessage(HttpMethod.Post, "/api/products/release")
+                {
+                    Content = JsonContent.Create(requestBody)
+                };
+                return request;
+            });
         }
     }
 }

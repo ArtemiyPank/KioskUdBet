@@ -11,5 +11,7 @@ namespace KioskAPI.Services
         Task<bool> DeleteProductAsync(int productId);
         Task<bool> UpdateProductAsync(Product product);
         Task<bool> ToggleVisibility(int id);
+        Task<int> ReserveProductStockAsync(int productId, int quantity);
+        Task<int> ReleaseProductStockAsync(int productId, int quantity);
     }
 }

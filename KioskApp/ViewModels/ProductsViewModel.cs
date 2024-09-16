@@ -17,6 +17,9 @@ namespace KioskApp.ViewModels
         private readonly IUserService _userService;
         private readonly ICacheService _cacheService;
         private readonly CartViewModel _cartViewModel;
+        private readonly ISseService _sseService;
+
+        private CancellationTokenSource _cts;
 
         public ObservableCollection<Product> Products { get; private set; }
         public ICommand LoadProductsCommand { get; private set; }
@@ -38,23 +41,15 @@ namespace KioskApp.ViewModels
             }
         }
 
-        public ProductsViewModel(IProductApiService productApiService, IUserService userService, ICacheService cacheService, CartViewModel cartViewModel)
+        public ProductsViewModel(IProductApiService productApiService, IUserService userService, ICacheService cacheService, CartViewModel cartViewModel, ISseService sseService)
         {
             _productApiService = productApiService;
             _userService = userService;
             _cacheService = cacheService;
             _cartViewModel = cartViewModel;
+            _sseService = sseService;
 
             Debug.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            if (_cartViewModel == null)
-            {
-                Debug.WriteLine("CartViewModel is null.");
-            }
-            else
-            {
-                Debug.WriteLine("CartViewModel is not null.");
-
-            }
 
             Products = new ObservableCollection<Product>();
 
@@ -90,6 +85,8 @@ namespace KioskApp.ViewModels
         {
             try
             {
+                StopMonitoringProducts();
+
                 Products.Clear(); // Clear the list before loading new data
 
                 var products = await _productApiService.GetProducts();
@@ -129,12 +126,57 @@ namespace KioskApp.ViewModels
                     await _cacheService.DeleteProduct(productId);
                 }
 
+                Debug.WriteLine("Before StartMonitoringProductsStock");
+
+                StartMonitoringProducts();
+
+                Debug.WriteLine("After StartMonitoringProductsStock");
+
+
                 _cacheService.PrintCacheDirectoryStructure(); // печать структуры папки кэша
 
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error loading products: {ex.Message}");
+            }
+        }
+
+
+        public void StartMonitoringProducts()
+        {
+            Debug.WriteLine("In StartMonitoringProducts");
+            _cts = new CancellationTokenSource();
+            _sseService.StartMonitoringAllProductsStock(UpdateStock, _cts.Token);
+        }
+
+
+        public void StopMonitoringProducts()
+        {
+            Debug.WriteLine("In StopMonitoringProducts");
+
+            if (_cts != null)
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+                _cts = null;
+            }
+        }
+
+
+        private void UpdateStock(int id, int quantity)
+        {
+            Debug.WriteLine($"In UpdateStock of product {id} with quantity {quantity}");
+            foreach (var product in Products)
+            {
+                if (product.Id == id)
+                {
+                    Debug.WriteLine($"Product was found");
+
+                    product.Stock = quantity;
+                    OnPropertyChanged(nameof(Products));
+                    return;
+                }
             }
         }
 

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using System.IO;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace KioskAPI.Controllers
 {
@@ -107,55 +108,51 @@ namespace KioskAPI.Controllers
                 }
 
                 _logger.LogInformation("Updating product.");
-                _logger.LogInformation($"Product ID: {product.Id} \n" +
-                    $"Product name: {product.Name} \n" +
-                    $"Product description: {product.Description} \n" +
-                    $"Product price: {product.Price} \n" +
-                    $"Product stock: {product.Stock} \n" +
-                    $"Product category: {product.Category} \n" +
-                    $"Product last updated: {product.LastUpdated} \n");
 
-
-                // Получаем существующий продукт без отслеживания
+                // Получаем существующий продукт
                 var existingProduct = await _productService.GetProductByIdAsync(id);
                 if (existingProduct == null)
                 {
                     return NotFound("Product not found");
                 }
 
+                // Проверяем изменение количества товара
                 if (existingProduct.Stock != product.Stock)
                 {
-                    SseController.NotifyProductQuantityChanged(id, product.Stock.ToString());
+                    SseController.NotifyProductQuantityChanged(id, product.Stock);
                 }
 
-                // Копируем обновляемые свойства в существующий продукт
+                // Обновляем свойства продукта
                 existingProduct.Name = product.Name;
                 existingProduct.Description = product.Description;
                 existingProduct.Price = product.Price;
                 existingProduct.Stock = product.Stock;
+                existingProduct.ReservedStock = product.ReservedStock;
                 existingProduct.Category = product.Category;
-                existingProduct.LastUpdated = product.LastUpdated;
+                existingProduct.LastUpdated = DateTime.UtcNow; // Обновляем время
 
-                // Обновляем продукт
+                // Обновляем продукт в базе данных
                 await _productService.UpdateProduct(id, existingProduct);
 
+                // Обработка изображения, если оно было передано
                 if (image != null && image.Length > 0)
                 {
                     _logger.LogInformation($"Received image with length: {image.Length}");
 
-                    // Генерируем новое имя файла
+                    // Генерируем новое имя файла и путь
                     var newFileName = $"product_{existingProduct.Id}.jpg";
                     var imagePath = Path.Combine("wwwroot/images", newFileName);
 
+                    // Сохраняем изображение
                     using (var stream = new FileStream(imagePath, FileMode.Create))
                     {
-                        _logger.LogInformation("Starting to copy image to file stream.");
                         await image.CopyToAsync(stream);
-                        _logger.LogInformation("Finished copying image to file stream.");
                     }
+
+                    // Обновляем URL изображения
                     existingProduct.ImageUrl = $"/images/{newFileName}";
 
-                    // Обновляем продукт с новым URL изображения
+                    // Обновляем продукт с URL изображения
                     await _productService.UpdateProduct(existingProduct.Id, existingProduct);
                 }
                 else
@@ -171,6 +168,46 @@ namespace KioskAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error updating product");
             }
         }
+
+        public class QuantityRequest
+        {
+            public int ProductId { get; set; }
+            public int Quantity { get; set; }
+        }
+
+
+        // API для резервирования товара
+        [HttpPost("reserve")]
+        public async Task<IActionResult> ReserveProductStock([FromBody] QuantityRequest request)
+        {
+            try
+            {
+                var availableStock = await _productService.ReserveProductStockAsync(request.ProductId, request.Quantity);
+                SseController.NotifyProductQuantityChanged(request.ProductId, request.Quantity);
+                return Ok(new { AvailableStock = availableStock });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        // API для освобождения товара
+        [HttpPost("release")]
+        public async Task<IActionResult> ReleaseProductStock([FromBody] QuantityRequest request)
+        {
+            try
+            {
+                var availableStock = await _productService.ReleaseProductStockAsync(request.ProductId, request.Quantity);
+                SseController.NotifyProductQuantityChanged(request.ProductId, request.Quantity);
+                return Ok(new { AvailableStock = availableStock });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
 
 
         [Authorize(Roles = "Admin")]

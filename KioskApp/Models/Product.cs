@@ -11,6 +11,7 @@ public class Product
     public string Category { get; set; }
     public decimal? Price { get; set; }
     public int? Stock { get; set; }
+    public int ReservedStock { get; set; } = 0;
     public string ImageUrl { get; set; }
     public bool IsHidden { get; set; } = false;
     public DateTime LastUpdated { get; set; }
