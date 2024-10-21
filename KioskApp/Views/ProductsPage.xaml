@@ -25,7 +25,7 @@
                                 <Label Text="{Binding Name, StringFormat='Name: {0}'}" FontAttributes="Bold" />
                                 <Label Text="{Binding Description, StringFormat='Description: {0}'}" />
                                 <Label Text="{Binding Price, StringFormat='Price: {0:C}'}" />
-                                <Label Text="{Binding Stock, StringFormat='Stock: {0}'}" />
+                                <Label Text="{Binding AvailableStock, StringFormat='Stock: {0}'}" />
                                 <Button Text="Add to Cart" 
                                         Command="{Binding Path=BindingContext.AddToCartCommand, Source={x:Reference productsPage}}"
                                         CommandParameter="{Binding .}" />

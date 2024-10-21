@@ -1,5 +1,6 @@
 ﻿using KioskApp;
 using KioskApp.Helpers;
+using KioskApp.Models;
 using KioskApp.Services;
 using KioskApp.ViewModels;
 using KioskApp.Views;
@@ -40,6 +41,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<AppState>();
         builder.Services.AddTransient<AppShell>();
 
+
+
         // Register services
         builder.Services.AddSingleton<IUserApiService, UserApiService>();
         builder.Services.AddSingleton<IProductApiService, ProductApiService>();
@@ -52,13 +55,13 @@ public static class MauiProgram
 
 
         // Register view models
-        builder.Services.AddTransient<ProfileViewModel>();
-        builder.Services.AddTransient<LoginViewModel>();
-        builder.Services.AddTransient<RegisterViewModel>();
-        builder.Services.AddTransient<ProductsViewModel>();
-        builder.Services.AddTransient<AddProductViewModel>();
-        builder.Services.AddTransient<EditProductViewModel>();
-        builder.Services.AddTransient<OrdersViewModel>();
+        builder.Services.AddSingleton<ProfileViewModel>();
+        builder.Services.AddSingleton<LoginViewModel>();
+        builder.Services.AddSingleton<RegisterViewModel>();
+        builder.Services.AddSingleton<ProductsViewModel>();
+        builder.Services.AddSingleton<AddProductViewModel>();
+        builder.Services.AddSingleton<EditProductViewModel>();
+        builder.Services.AddSingleton<OrdersViewModel>();
         builder.Services.AddSingleton<CartViewModel>();
 
         // Register views

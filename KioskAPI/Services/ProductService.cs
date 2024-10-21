@@ -4,7 +4,7 @@ using KioskAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace KioskAPI.Services
@@ -43,82 +43,6 @@ namespace KioskAPI.Services
             await _context.SaveChangesAsync();
             return product;
         }
-
-
-        public async Task<bool> UpdateProductAsync(Product product)
-        {
-            var existingProduct = await _context.Products.FindAsync(product.Id);
-            if (existingProduct == null)
-            {
-                return false;
-            }
-
-            existingProduct.Name = product.Name;
-            existingProduct.Description = product.Description;
-            existingProduct.Price = product.Price;
-            existingProduct.Stock = product.Stock;
-            existingProduct.ReservedStock = product.ReservedStock;
-            existingProduct.Category = product.Category;
-            existingProduct.LastUpdated = DateTime.UtcNow;
-
-            if (!string.IsNullOrEmpty(product.ImageUrl))
-            {
-                existingProduct.ImageUrl = product.ImageUrl;
-            }
-
-            _context.Products.Update(existingProduct);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        // Резервирование товара
-        public async Task<int> ReserveProductStockAsync(int productId, int quantity)
-        {
-            var product = await _context.Products.FindAsync(productId);
-
-            if (product == null)
-            {
-                throw new Exception("Product not found.");
-            }
-
-            // Проверяем, достаточно ли товаров для резервирования
-            if (product.Stock < product.ReservedStock + quantity)
-            {
-                throw new Exception("Not enough stock available.");
-            }
-
-            // Резервируем товар
-            product.ReservedStock += quantity;
-            await _context.SaveChangesAsync();
-
-            // Возвращаем доступное количество товара
-            return product.Stock - product.ReservedStock;
-        }
-
-        // Освобождение товара
-        public async Task<int> ReleaseProductStockAsync(int productId, int quantity)
-        {
-            var product = await _context.Products.FindAsync(productId);
-
-            if (product == null)
-            {
-                throw new Exception("Product not found.");
-            }
-
-            // Проверяем, можно ли освободить товар
-            if (product.ReservedStock < quantity)
-            {
-                throw new Exception("Invalid release quantity.");
-            }
-
-            // Освобождаем товар
-            product.ReservedStock -= quantity;
-            await _context.SaveChangesAsync();
-
-            // Возвращаем доступное количество товара
-            return product.Stock - product.ReservedStock;
-        }
-
 
         public async Task<bool> ToggleVisibility(int productId)
         {
@@ -178,6 +102,56 @@ namespace KioskAPI.Services
                 _logger.LogError($"Error when deleting product with ID {productId}: {ex.Message}");
                 throw new Exception($"Failed to delete product with ID {productId}", ex);
             }
+        }
+
+        // Резервирование товара
+        public async Task<int> ReserveProductStockAsync(int productId, int quantity)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null) throw new Exception("Product not found");
+
+            product.ReserveStock(quantity); // Резервируем товар
+            await _context.SaveChangesAsync();
+            return product.AvailableStock; // Возвращаем доступное количество
+        }
+
+        // Освобождение товара
+        public async Task<int> ReleaseProductStockAsync(int productId, int quantity)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null) throw new Exception("Product not found");
+
+            product.ReleaseStock(quantity); // Освобождаем товар
+            await _context.SaveChangesAsync();
+            return product.AvailableStock; // Возвращаем доступное количество
+        }
+
+        // Получение доступного количества товара
+        public async Task<int> GetStock(int productId)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null) throw new Exception("Product not found");
+
+            return product.Stock;
+        }
+
+        // Получение зарезервированного количества товара
+        public async Task<int> GetReservedStock(int productId)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null) throw new Exception("Product not found");
+
+            return product.ReservedStock;
+        }
+
+        // Подтверждение заказа при доставке
+        public async Task ConfirmOrderAsync(int productId, int quantity)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null) throw new Exception("Product not found");
+
+            product.ConfirmOrder(quantity); // Обновляем количество на складе
+            await _context.SaveChangesAsync();
         }
     }
 }

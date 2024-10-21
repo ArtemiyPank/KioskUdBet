@@ -46,7 +46,11 @@ namespace KioskApp.Services
 
         public async Task<ApiResponse> Authenticate(string email, string password)
         {
+            //Debug.WriteLine("--------- flag 1 --------- Authenticate(string email, string password)");
+
             var response = await _userApiService.AuthenticateUser(email, password);
+            //Debug.WriteLine("--------- flag 2 --------- Authenticate(string email, string password)");
+
             if (response.IsSuccess)
             {
                 await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
@@ -56,6 +60,7 @@ namespace KioskApp.Services
             {
                 Debug.WriteLine($"Authentication failed in UserService: {response.Message}");
             }
+            //Debug.WriteLine("--------- flag 3 --------- Authenticate(string email, string password)");
 
             ApiResponse completeResponse = new ApiResponse()
             {

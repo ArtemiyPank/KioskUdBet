@@ -3,6 +3,7 @@ using Microsoft.Maui.Controls;
 using Syncfusion.Maui.Sliders;
 using System;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace KioskApp.Views
 {
@@ -19,9 +20,17 @@ namespace KioskApp.Views
             else
             {
                 Debug.WriteLine("timeRangeSlider is null.");
-            } 
+            }
 
-            BindingContext = viewModel;
+            try
+            {
+                BindingContext = viewModel;
+            }
+            catch (TargetInvocationException ex)
+            {
+                Debug.WriteLine($"Error: {ex.InnerException?.Message}");
+                Debug.WriteLine($"Stack Trace: {ex.InnerException?.StackTrace}");
+            }
         }
 
         private void OnRangeSliderValueChanging(object sender, DateTimeRangeSliderValueChangingEventArgs e)

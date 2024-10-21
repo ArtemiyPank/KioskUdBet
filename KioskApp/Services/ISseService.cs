@@ -10,7 +10,7 @@ namespace KioskApp.Services
     {
         //Task StartMonitoringOrderStatus(int orderId, Action<string> onStatusUpdate, CancellationToken cancellationToken);
         //Task StartOrderStatusSseAsync(int orderId, Action<string> onStatusUpdate, CancellationToken cancellationToken);
-        Task StartMonitoringAllProductsStock(Action<int, int> onQuantityUpdate, CancellationToken cancellationToken);
-        Task StartAllProductsStockSseAsync(Action<int, int> onQuantityUpdate, CancellationToken cancellationToken);
+        Task StartMonitoringAllProductsStock(Action<int, int, int> onQuantityUpdate, CancellationToken cancellationToken);
+        Task StartAllProductsStockSseAsync(Action<int, int, int> onQuantityUpdate, CancellationToken cancellationToken);
     }
 }

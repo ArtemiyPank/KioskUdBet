@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KioskApp.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -6,59 +7,80 @@ namespace KioskApp.Models
 {
     public class Order
     {
-        private User currentUser;
-        private ObservableCollection<OrderItem> cartItems;
-
         public int Id { get; set; }
         public int UserId { get; set; }
         public User User { get; set; }
         public List<OrderItem> OrderItems { get; set; }
         public DateTime CreationTime { get; set; } = DateTime.Now;
-        public string Building { get; set; }
-        public string RoomNumber { get; set; }
+        public string Building => User.Building;
+        public string RoomNumber => User.RoomNumber;
         public DateTime DeliveryStartTime { get; set; }
         public DateTime DeliveryEndTime { get; set; }
-        public string Status { get; set; } = "Placed"; // Статус заказа по умолчанию - "Оформлен"
+        public string Status { get; set; } = "Not placed"; // Изменение статуса по умолчанию
 
-        // Перечисление возможных статусов заказа
-        //public enum OrderStatus
-        //{
-        //    Placed,    // Оформлен
-        //    Assembling, // На сборке
-        //    Delivered  // Доставлен
-        //}
-        //public OrderStatus Status { get; set; } = OrderStatus.Placed; // Статус заказа по умолчанию - "Оформлен"
+        public Order()
+        {
+            OrderItems = new List<OrderItem>();
+        }
 
-
-        public Order() { }
-
-
-        // Конструктор для инициализации данных заказа
+        // Конструктор для инициализации заказа
         public Order(User user, List<OrderItem> orderItems)
         {
             User = user;
             UserId = user.Id;
             OrderItems = orderItems;
-            Building = user.Building;
-            RoomNumber = user.RoomNumber;
+            Status = "Not placed"; // Статус по умолчанию
         }
 
+        // Метод для создания нового пустого заказа после доставки
+        public static Order CreateNewEmptyOrder(User user)
+        {
+            return new Order
+            {
+                User = user,
+                UserId = user.Id,
+                OrderItems = new List<OrderItem>(), // Пустой список товаров
+                Status = "Not placed"
+            };
+        }
+
+        public bool UpdateOrderItems(AppState appState)
+        {
+            if (OrderItems == null) return false;
+            foreach (var item in OrderItems)
+            {
+                if (!item.LoadProductFromAppState(appState)) return false;
+            }
+            return true;
+        }
 
         public override string ToString()
         {
             string data = $"-----Order {Id}----- \n" +
-                $"User - \n" +
-                $"  {User.Id}\n" +
-                $"  {User.FullName}\n" +
-                $"  {User.Email}\n" +
-                $"CreationTime - {CreationTime}\n" +
-                $"DeliveryLocation - {Building}, Room {RoomNumber}\n" +
-                $"DeliveryTime - {DeliveryStartTime:HH:mm} - {DeliveryEndTime:HH:mm}\n";
+                          $"User - \n" +
+                          $"  {User.Id}\n" +
+                          $"  {User.FullName}\n" +
+                          $"  {User.Email}\n" +
+                          $"CreationTime - {CreationTime}\n" +
+                          $"DeliveryLocation - {Building}, Room {RoomNumber}\n" +
+                          $"DeliveryTime - {DeliveryStartTime:HH:mm} - {DeliveryEndTime:HH:mm}\n";
 
-            data += $"OrderItems - \n";
+            data += "OrderItems - \n";
             foreach (var item in OrderItems)
             {
                 data += $"   - {item.Product.Name} * {item.Quantity}\n";
+            }
+
+            return data;
+        }
+
+        public string ItemsToString()
+        {
+            string data = $"------- Items of the {Id}th order -------";
+
+            foreach (var item in OrderItems)
+            {
+                data += item.ToString();
             }
 
             return data;

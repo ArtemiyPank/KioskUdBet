@@ -1,5 +1,11 @@
 ﻿namespace KioskApp.Models
 {
+    public class ProductStockResponse
+    {
+        public int Stock { get; set; }
+        public int ReservedStock { get; set; }
+    }
+
     public class AuthResponse
     {
         public bool IsSuccess { get; set; }

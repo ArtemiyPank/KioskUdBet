@@ -8,6 +8,7 @@ using MvvmHelpers;
 using Microsoft.Maui.Controls;
 using System.Threading.Tasks;
 using KioskApp.Views;
+using KioskApp.Helpers;
 
 namespace KioskApp.ViewModels
 {
@@ -18,10 +19,12 @@ namespace KioskApp.ViewModels
         private readonly ICacheService _cacheService;
         private readonly CartViewModel _cartViewModel;
         private readonly ISseService _sseService;
+        private readonly AppState _appState;
 
-        private CancellationTokenSource _cts;
+        private CancellationTokenSource? _cts;
 
-        public ObservableCollection<Product> Products { get; private set; }
+        public ObservableCollection<Product> Products => _appState.Products;
+
         public ICommand LoadProductsCommand { get; private set; }
         public ICommand NavigateToAddProductCommand { get; private set; }
         public ICommand DeleteProductCommand { get; private set; }
@@ -33,25 +36,23 @@ namespace KioskApp.ViewModels
         {
             get
             {
-                if (_userService.GetCurrentUser() != null)
-                {
-                    return _userService.GetCurrentUser()?.Role == "Admin";
-                }
-                else { return false; }
+                var currentUser = _userService.GetCurrentUser();
+                Debug.WriteLine($"Checking if user is admin: {(currentUser?.Role == "Admin")}");
+                return currentUser?.Role == "Admin";
             }
         }
 
-        public ProductsViewModel(IProductApiService productApiService, IUserService userService, ICacheService cacheService, CartViewModel cartViewModel, ISseService sseService)
+        public ProductsViewModel(IProductApiService productApiService, IUserService userService, ICacheService cacheService, CartViewModel cartViewModel, ISseService sseService, AppState appState)
         {
             _productApiService = productApiService;
             _userService = userService;
             _cacheService = cacheService;
             _cartViewModel = cartViewModel;
             _sseService = sseService;
+            _appState = appState;
 
-            Debug.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            _appState.TestStr = "was initialized in ProductsViewModel";
 
-            Products = new ObservableCollection<Product>();
 
             AddToCartCommand = new Command<Product>((product) => OnAddToCart(product));
             LoadProductsCommand = new Command(async () => await LoadProducts());
@@ -61,33 +62,37 @@ namespace KioskApp.ViewModels
             NavigateToEditProductCommand = new Command<Product>(async (product) => await NavigateToEditProduct(product));
             ToggleVisibilityCommand = new Command<Product>(async (product) => await ToggleVisibility(product));
 
+            Debug.WriteLine("ProductsViewModel initialized.");
             LoadProductsCommand.Execute(null);
 
             MessagingCenter.Subscribe<AddProductViewModel>(this, "ProductAdded", async (sender) =>
             {
+                Debug.WriteLine("Product added, reloading products.");
                 await LoadProducts();
             });
 
             MessagingCenter.Subscribe<EditProductViewModel>(this, "ProductUpdated", async (sender) =>
             {
+                Debug.WriteLine("Product updated, reloading products.");
                 await LoadProducts();
             });
 
-            // Loading products when user registers, logs in or logs out of account
             MessagingCenter.Subscribe<AppShell>(this, "UserStateChanged", async (sender) =>
             {
+                Debug.WriteLine("User state changed, reloading products.");
                 OnPropertyChanged(nameof(IsAdmin));
                 await LoadProducts();
             });
         }
 
-        private async Task LoadProducts()
+        public async Task LoadProducts()
         {
             try
             {
+                Debug.WriteLine("Loading products...");
                 StopMonitoringProducts();
 
-                Products.Clear(); // Clear the list before loading new data
+                _appState.Products.Clear(); // Clear the list before loading new data
 
                 var products = await _productApiService.GetProducts();
                 var cachedProductIds = _cacheService.GetCachedProductIds();
@@ -95,18 +100,21 @@ namespace KioskApp.ViewModels
                 foreach (var product in products)
                 {
                     cachedProductIds.Remove(product.Id);
+                    Debug.WriteLine($"Processing product {product.Id}: {product.Name}");
 
                     if (!IsAdmin && product.IsHidden)
                     {
+                        Debug.WriteLine($"Product {product.Id} is hidden and user is not admin. Skipping.");
                         continue;
                     }
 
                     var cachedProduct = await _cacheService.GetProductAsync(product.Id);
                     if (cachedProduct != null)
                     {
-                        // Если изменился дата последнего обновления
+                        Debug.WriteLine($"Product {product.Id} found in cache.");
                         if (cachedProduct.LastUpdated != product.LastUpdated)
                         {
+                            Debug.WriteLine($"Product {product.Id} has been updated, downloading new image.");
                             var imageStream = await _productApiService.DownloadProductImage(product.ImageUrl);
                             await _cacheService.SaveProductAsync(product, imageStream);
                         }
@@ -114,27 +122,21 @@ namespace KioskApp.ViewModels
                     }
                     else
                     {
+                        Debug.WriteLine($"Product {product.Id} not found in cache, downloading image.");
+
                         var imageStream = await _productApiService.DownloadProductImage(product.ImageUrl);
+
                         await _cacheService.SaveProductAsync(product, imageStream);
+
                         product.ImageUrl = await _cacheService.GetProductImagePath(product.Id);
                     }
-                    Products.Add(product);
+                    Debug.WriteLine(product.ToString());
+
+                    _appState.Products.Add(product);
                 }
 
-                foreach (var productId in cachedProductIds)
-                {
-                    await _cacheService.DeleteProduct(productId);
-                }
-
-                Debug.WriteLine("Before StartMonitoringProductsStock");
-
+                Debug.WriteLine("Finished loading products.");
                 StartMonitoringProducts();
-
-                Debug.WriteLine("After StartMonitoringProductsStock");
-
-
-                _cacheService.PrintCacheDirectoryStructure(); // печать структуры папки кэша
-
             }
             catch (Exception ex)
             {
@@ -143,50 +145,48 @@ namespace KioskApp.ViewModels
         }
 
 
+
+
         public void StartMonitoringProducts()
         {
-            Debug.WriteLine("In StartMonitoringProducts");
             _cts = new CancellationTokenSource();
+            Debug.WriteLine("Started monitoring product stock via SSE.");
             _sseService.StartMonitoringAllProductsStock(UpdateStock, _cts.Token);
         }
 
-
         public void StopMonitoringProducts()
         {
-            Debug.WriteLine("In StopMonitoringProducts");
-
             if (_cts != null)
             {
+                Debug.WriteLine("Stopped monitoring product stock.");
                 _cts.Cancel();
                 _cts.Dispose();
                 _cts = null;
             }
         }
 
-
-        private void UpdateStock(int id, int quantity)
+        private void UpdateStock(int productId, int stock, int reservedStock)
         {
-            Debug.WriteLine($"In UpdateStock of product {id} with quantity {quantity}");
-            foreach (var product in Products)
+            Debug.WriteLine($"Updating stock for product {productId}. Stock: {stock}, Reserved: {reservedStock}");
+            var product = Products.FirstOrDefault(p => p.Id == productId);
+            if (product != null)
             {
-                if (product.Id == id)
-                {
-                    Debug.WriteLine($"Product was found");
-
-                    product.Stock = quantity;
-                    OnPropertyChanged(nameof(Products));
-                    return;
-                }
+                product.Stock = stock;
+                product.ReservedStock = reservedStock;  // Обновляем зарезервированное количество
+                OnPropertyChanged(nameof(Products));
             }
         }
 
+
         private async Task NavigateToAddProduct()
         {
+            Debug.WriteLine("Navigating to AddProductPage.");
             await Shell.Current.GoToAsync(nameof(AddProductPage));
         }
 
         private async Task NavigateToEditProduct(Product product)
         {
+            Debug.WriteLine($"Navigating to EditProductPage for product {product.Id}.");
             var navigationParameter = new Dictionary<string, object>
             {
                 { "Product", product }
@@ -196,31 +196,49 @@ namespace KioskApp.ViewModels
 
         private async Task ToggleVisibility(Product product)
         {
+            Debug.WriteLine($"Toggling visibility for product {product.Id}.");
             var result = await _productApiService.ToggleVisibility(product.Id);
             if (result)
             {
                 product.IsHidden = !product.IsHidden;
+                Debug.WriteLine($"Product {product.Id} visibility changed to {product.IsHidden}.");
                 await LoadProducts();
             }
         }
 
         private async Task DeleteProduct(Product product)
         {
+            Debug.WriteLine($"Deleting product {product.Id}.");
             var result = await _productApiService.DeleteProduct(product.Id);
             if (result)
             {
-                Products.Remove(product);
+                Debug.WriteLine($"Product {product.Id} deleted.");
+                _appState.Products.Remove(product);
                 await LoadProducts();
             }
         }
 
         private void OnAddToCart(Product product)
         {
-            Debug.WriteLine($"In OnAddToCart");
-
-            // Добавляем продукт в корзину, используя CartViewModel
+            Debug.WriteLine($"Adding product {product.Id} to cart.");
             _cartViewModel.AddToCartCommand.Execute(product);
-            Debug.WriteLine($"Product added to cart: {product.Name}");
+        }
+
+        public async Task ConfirmOrder(int productId, int quantity)
+        {
+            Debug.WriteLine($"Confirming order for product {productId} with quantity {quantity}.");
+            await _productApiService.ConfirmOrder(productId, quantity);
+        }
+
+
+        public void PrintProducts()
+        {
+            Debug.WriteLine("==================== Products in ProductsViewModel ====================");
+            foreach (var product in Products)
+            {
+                Debug.WriteLine(product.ToString());
+            }
+            Debug.WriteLine("=======================================================================");
         }
     }
 }

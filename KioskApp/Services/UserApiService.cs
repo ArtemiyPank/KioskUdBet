@@ -27,14 +27,27 @@ namespace KioskApp.Services
         // Метод для отправки запросов с автоматическим обновлением токенов
         public async Task<HttpResponseMessage> SendRequestAsync(Func<HttpRequestMessage> createRequest, bool isSseRequest = false)
         {
+            //Debug.WriteLine("In SendRequestAsync");
             if (_appState.CurrentUser != null)
             {
+                //Debug.WriteLine(":::::: flag 1 :::::: SendRequestAsync");
+
                 await EnsureAccessToken();
 
+                //Debug.WriteLine(":::::: flag 2 :::::: SendRequestAsync");
+
                 var request = createRequest();
+                
+                //Debug.WriteLine(":::::: flag 3 :::::: SendRequestAsync");
+                
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appState.AccessToken);
+               
+                //Debug.WriteLine(":::::: flag 4 :::::: SendRequestAsync");
 
                 if (!isSseRequest) return await _httpClient.SendAsync(request);
+                
+                //Debug.WriteLine(":::::: flag 5 :::::: SendRequestAsync");
+                
                 return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             }
 
@@ -94,6 +107,30 @@ namespace KioskApp.Services
                     // Deserialize JsonElement to User object
                     var registeredUser = JsonSerializer.Deserialize<User>(jsonElement.GetRawText());
 
+                    //// Fetch or create the last order for the user
+                    //Debug.WriteLine($"Fetching or creating the last order for user with ID: {user.Id}");
+                    //var orderResponse = await SendRequestAsync(() =>
+                    //{
+                    //    return new HttpRequestMessage(HttpMethod.Get, $"/api/order/user/{user.Id}/lastOrder");
+                    //});
+
+                    //// Логируем статус ответа
+                    //Debug.WriteLine($"Order response status: {orderResponse.StatusCode}");
+
+                    //var lastOrder = await orderResponse.Content.ReadFromJsonAsync<Order>();
+
+                    //// Проверяем, что заказ был успешно получен и логируем
+                    //if (lastOrder != null)
+                    //{
+                    //    Debug.WriteLine($"Fetched or created last order with ID: {lastOrder.Id} for user {user.Id}");
+                    //    Preferences.Set("OrderId", lastOrder.Id);
+                    //}
+                    //else
+                    //{
+                    //    Debug.WriteLine($"Failed to fetch or create the last order for user {user.Id}");
+                    //}
+
+
                     return new AuthResponse
                     {
                         IsSuccess = true,
@@ -126,8 +163,10 @@ namespace KioskApp.Services
         // Authenticate user using email and password, and retrieve tokens
         public async Task<AuthResponse> AuthenticateUser(string email, string password)
         {
+            //Debug.WriteLine("In AuthenticateUser");
             try
             {
+                //Debug.WriteLine("--------- flag 1 --------- AuthenticateUser");
                 var response = await SendRequestAsync(() =>
                 {
                     return new HttpRequestMessage(HttpMethod.Post, "/api/users/authenticate")
@@ -135,8 +174,13 @@ namespace KioskApp.Services
                         Content = JsonContent.Create(new { email, password })
                     };
                 });
+                //Debug.WriteLine($"response: {response}");
+                //Debug.WriteLine("--------- flag 2 --------- AuthenticateUser");
 
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse>();
+                //Debug.WriteLine($"result: {result}");
+
+                //Debug.WriteLine("--------- flag 3 --------- AuthenticateUser");
 
                 if (result.IsSuccess)
                 {
@@ -144,13 +188,46 @@ namespace KioskApp.Services
                     var refreshTokens = response.Headers.GetValues("Refresh-Token");
                     var token = accessTokens.FirstOrDefault();
                     var refreshToken = refreshTokens.FirstOrDefault();
+                    //Debug.WriteLine("--------- flag 4 --------- AuthenticateUser");
 
-                    // Serialize the Data to JSON string and then parse it as JsonElement
+                    // Deserialize user data
                     string userJson = JsonSerializer.Serialize(result.Data);
-                    JsonElement jsonElement = JsonDocument.Parse(userJson).RootElement;
+                    var user = JsonSerializer.Deserialize<User>(userJson);
 
-                    // Deserialize JsonElement to User object
-                    var user = JsonSerializer.Deserialize<User>(jsonElement.GetRawText());
+                    //Debug.WriteLine("--------- flag 5 --------- AuthenticateUser");
+
+                    // Fetch or create the last order for the user
+                    //Debug.WriteLine($"Fetching or creating the last order for user with ID: {user.Id}");
+                    //var orderResponse = await SendRequestAsync(() =>
+                    //{
+                    //    return new HttpRequestMessage(HttpMethod.Get, $"/api/order/user/{user.Id}/lastOrder");
+                    //});
+                    //Debug.WriteLine("--------- flag 6 --------- AuthenticateUser");
+
+                    // Логируем статус ответа
+                    //Debug.WriteLine($"Order response status: {orderResponse.StatusCode}");
+                    //Debug.WriteLine($"orderResponse: {orderResponse}");
+                    //Debug.WriteLine($"orderResponse.Content: {orderResponse.Content.ToString()}");
+
+                    //string lastOrderJson = JsonSerializer.Serialize(result.Data);
+                    //Debug.WriteLine($"lastOrderJson: {lastOrderJson}");
+
+                    //var lastOrder = JsonSerializer.Deserialize<User>(userJson);
+                    //Debug.WriteLine($"lastOrder: {lastOrder}");
+
+                    //var lastOrder = await orderResponse.Content.ReadFromJsonAsync<Order>();
+
+                    //// Проверяем, что заказ был успешно получен и логируем
+                    //if (lastOrder != null)
+                    //{
+                    //    Debug.WriteLine($"Fetched or created last order with ID: {lastOrder.Id} for user {user.Id}");
+                    //    Preferences.Set("OrderId", lastOrder.Id);
+                    //}
+                    //else
+                    //{
+                    //    Debug.WriteLine($"Failed to fetch or create the last order for user {user.Id}");
+                    //}
+
 
                     return new AuthResponse
                     {
@@ -181,6 +258,7 @@ namespace KioskApp.Services
             }
         }
 
+
         // Authenticate using refresh token and retrieve new tokens
         public async Task<AuthResponse> AuthenticateWithToken(string refreshToken)
         {
@@ -210,6 +288,30 @@ namespace KioskApp.Services
 
                     // Deserialize JsonElement to User object
                     var user = JsonSerializer.Deserialize<User>(jsonElement.GetRawText());
+
+                    //// Fetch or create the last order for the user
+                    //Debug.WriteLine($"Fetching or creating the last order for user with ID: {user.Id}");
+                    //var orderResponse = await SendRequestAsync(() =>
+                    //{
+                    //    return new HttpRequestMessage(HttpMethod.Get, $"/api/order/user/{user.Id}/lastOrder");
+                    //});
+
+                    //// Логируем статус ответа
+                    //Debug.WriteLine($"Order response status: {orderResponse.StatusCode}");
+
+                    //var lastOrder = await orderResponse.Content.ReadFromJsonAsync<Order>();
+
+                    //// Проверяем, что заказ был успешно получен и логируем
+                    //if (lastOrder != null)
+                    //{
+                    //    Debug.WriteLine($"Fetched or created last order with ID: {lastOrder.Id} for user {user.Id}");
+                    //    Preferences.Set("OrderId", lastOrder.Id);
+                    //}
+                    //else
+                    //{
+                    //    Debug.WriteLine($"Failed to fetch or create the last order for user {user.Id}");
+                    //}
+
 
                     return new AuthResponse
                     {

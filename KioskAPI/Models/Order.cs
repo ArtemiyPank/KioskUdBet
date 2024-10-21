@@ -16,7 +16,7 @@ namespace KioskAPI.Models
         public string RoomNumber { get; set; }
         public DateTime DeliveryStartTime { get; set; }
         public DateTime DeliveryEndTime { get; set; }
-        public string Status { get; set; } = "Placed";
+        public string Status { get; set; } = "Not placed"; // Изначальный статус
 
         public Order()
         {
@@ -27,9 +27,28 @@ namespace KioskAPI.Models
         {
             User = user;
             UserId = user.Id;
-            OrderItems = orderItems;
             Building = user.Building;
             RoomNumber = user.RoomNumber;
+            Status = "Not placed";
+            OrderItems = orderItems;
+        }
+
+        // Метод для создания нового пустого заказа со статусом "Not placed"
+        public static Order CreateNewEmptyOrder(User user)
+        {
+            var newOrder = new Order
+            {
+                User = user,
+                UserId = user.Id,
+                Building = user.Building,
+                RoomNumber = user.RoomNumber,
+                Status = "Not placed",
+                OrderItems = new List<OrderItem>() // Пустой список товаров
+            };
+
+            Console.WriteLine(newOrder.ToString());
+
+            return newOrder;
         }
 
         public override string ToString()
@@ -42,6 +61,18 @@ namespace KioskAPI.Models
             foreach (var item in OrderItems)
             {
                 data += $"- {item.Product.Name} x {item.Quantity}\n";
+            }
+
+            return data;
+        }
+
+        public string ItemsToString()
+        {
+            string data = $"------- Items of the {Id}th order -------";
+
+            foreach (var item in OrderItems)
+            {
+                data += item.ToString();
             }
 
             return data;

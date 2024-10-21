@@ -91,23 +91,22 @@ namespace KioskApp.Services
 
 
         // Подключение к SSE для отслеживания количества всех товаров
-        public Task StartMonitoringAllProductsStock(Action<int, int> onQuantityUpdate, CancellationToken cancellationToken)
+        public Task StartMonitoringAllProductsStock(Action<int, int, int> onQuantityUpdate, CancellationToken cancellationToken)
         {
             return Task.Run(async () =>
             {
-                await StartAllProductsStockSseAsync((productId, quantity) =>
+                await StartAllProductsStockSseAsync((productId, stock, reservedQuantity) =>
                 {
                     // Обновление UI на главном потоке
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
-                        onQuantityUpdate(productId, quantity);
-                        Debug.WriteLine($"Quantity of product {productId}: {quantity}");
+                        onQuantityUpdate(productId, stock, reservedQuantity);
                     });
                 }, cancellationToken);
             });
         }
 
-        public async Task StartAllProductsStockSseAsync(Action<int, int> onQuantityUpdate, CancellationToken cancellationToken)
+        public async Task StartAllProductsStockSseAsync(Action<int, int, int> onQuantityUpdate, CancellationToken cancellationToken)
         {
             try
             {
@@ -138,18 +137,32 @@ namespace KioskApp.Services
                                         message = message.Substring("data:".Length).Trim();
                                     }
 
-                                    Debug.WriteLine(message);
+                                    Debug.WriteLine($"Received message: {message}");
 
-                                    // Разбираем сообщение в формате productId:quantity
+                                    // Разбираем сообщение в формате productId:stock:reservedQuantity
                                     var parts = message.Split(':');
-                                    if (parts.Length == 2 && Int32.TryParse(parts[0], out var productId) && Int32.TryParse(parts[1], out var quantity))
+                                    if (parts.Length == 3)
                                     {
-                                        onQuantityUpdate(productId, quantity);
+                                        if (Int32.TryParse(parts[0], out var productId) &&
+                                            Int32.TryParse(parts[1], out var stock) &&
+                                            Int32.TryParse(parts[2], out var reservedQuantity))
+                                        {
+                                            Debug.WriteLine($"Product ID: {productId}, Stock: {stock}, Reserved Quantity: {reservedQuantity}");
+                                            onQuantityUpdate(productId, stock, reservedQuantity);
+                                        }
+                                        else
+                                        {
+                                            Debug.WriteLine($"Failed to parse productId, stock or reservedQuantity from message: {message}");
+                                        }
                                     }
                                     else
                                     {
                                         Debug.WriteLine($"Invalid message format received: {message}");
                                     }
+                                }
+                                else
+                                {
+                                    Debug.WriteLine("Received empty message.");
                                 }
                             }
                         }
@@ -169,6 +182,8 @@ namespace KioskApp.Services
                 Debug.WriteLine($"Error in SSE monitoring for all products: {ex.Message}");
             }
         }
+
+
 
 
     }

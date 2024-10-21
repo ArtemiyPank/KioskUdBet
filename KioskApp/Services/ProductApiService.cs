@@ -7,7 +7,6 @@ using System.Globalization;
 using System.IO;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -17,6 +16,8 @@ namespace KioskApp.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IUserApiService _userApiService;
+
+
 
 
         public ProductApiService(HttpClient httpClient)
@@ -29,6 +30,14 @@ namespace KioskApp.Services
         {
             try
             {
+                Debug.WriteLine("in DownloadProductImage");
+
+                if (string.IsNullOrEmpty(imageUrl))
+                {
+                    Debug.WriteLine("Error: imageUrl is null or empty.");
+                    throw new ArgumentNullException(nameof(imageUrl), "Image URL cannot be null or empty.");
+                }
+
                 return await _httpClient.GetStreamAsync(imageUrl);
             }
             catch (Exception ex)
@@ -93,7 +102,7 @@ namespace KioskApp.Services
 
                 if (imageStream != null)
                 {
-                    imageStream.Position = 0; // Обнуление позиции потока перед использованием
+                    imageStream.Position = 0;
                     var imageContent = new StreamContent(imageStream);
                     imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
                     content.Add(imageContent, "image", imageName);
@@ -144,7 +153,7 @@ namespace KioskApp.Services
 
                 if (imageStream != null)
                 {
-                    imageStream.Position = 0; // Обнуление позиции потока перед использованием
+                    imageStream.Position = 0;
                     var imageContent = new StreamContent(imageStream);
                     imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
                     content.Add(imageContent, "image", imageName);
@@ -240,9 +249,8 @@ namespace KioskApp.Services
             }
         }
 
-
-        // Резервирование товара
-        public async Task<HttpResponseMessage> ReserveProductStock(int productId, int quantity)
+        // Метод для резервирования товара
+        public async Task<ProductStockResponse> ReserveProductStock(int productId, int quantity)
         {
             var requestBody = new
             {
@@ -250,18 +258,22 @@ namespace KioskApp.Services
                 Quantity = quantity
             };
 
-            return await _userApiService.SendRequestAsync(() =>
+            var response = await _userApiService.SendRequestAsync(() =>
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, "/api/products/reserve")
+                return new HttpRequestMessage(HttpMethod.Post, "api/products/reserve")
                 {
                     Content = JsonContent.Create(requestBody)
                 };
-                return request;
             });
+
+            response.EnsureSuccessStatusCode();
+
+            // Десериализуем объект, содержащий доступные и зарезервированные запасы
+            return await response.Content.ReadFromJsonAsync<ProductStockResponse>();
         }
 
-        // Освобождение товара
-        public async Task<HttpResponseMessage> ReleaseProductStock(int productId, int quantity)
+        // Метод для освобождения товара
+        public async Task<ProductStockResponse> ReleaseProductStock(int productId, int quantity)
         {
             var requestBody = new
             {
@@ -269,14 +281,50 @@ namespace KioskApp.Services
                 Quantity = quantity
             };
 
-            return await _userApiService.SendRequestAsync(() =>
+            var response = await _userApiService.SendRequestAsync(() =>
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, "/api/products/release")
+                return new HttpRequestMessage(HttpMethod.Post, "api/products/release")
                 {
                     Content = JsonContent.Create(requestBody)
                 };
-                return request;
             });
+
+            response.EnsureSuccessStatusCode();
+
+            // Десериализуем объект, содержащий доступные и зарезервированные запасы
+            return await response.Content.ReadFromJsonAsync<ProductStockResponse>();
+        }
+
+        // Получение доступного количества товара
+        public async Task<int> GetAvailableStock(int productId)
+        {
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Get, $"api/products/{productId}/availableStock");
+            });
+
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<int>();
+        }
+
+        // Новый метод для подтверждения заказа
+        public async Task ConfirmOrder(int productId, int quantity)
+        {
+            var requestBody = new
+            {
+                ProductId = productId,
+                Quantity = quantity
+            };
+
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Post, $"api/products/{productId}/confirmOrder")
+                {
+                    Content = JsonContent.Create(requestBody)
+                };
+            });
+
+            response.EnsureSuccessStatusCode();
         }
     }
 }

@@ -17,7 +17,7 @@ namespace KioskAPI.Models
 
         public int Quantity { get; set; }
 
-        [NotMapped] // Убираем из базы данных, т. к. TotalPrice только для расчетов
+        [NotMapped] // Не сохраняем в базу данных, используем для расчетов
         public decimal TotalPrice => Product.Price * Quantity;
 
         public OrderItem() { }
@@ -29,9 +29,25 @@ namespace KioskAPI.Models
             Quantity = quantity;
         }
 
+        // Резервирование товара при добавлении в заказ
+        public void ReserveProduct()
+        {
+            Product.ReserveStock(Quantity);
+        }
+
+        // Освобождение товара при удалении или изменении заказа
+        public void ReleaseProduct()
+        {
+            Product.ReleaseStock(Quantity);
+        }
+
         public override string ToString()
         {
-            return $"{Product.Name} x {Quantity}";
+            string data = $"\n----- OrderItem {Id} ----- \n" +
+                $"OrderId: {OrderId} \n" +
+                $"ProductId: {ProductId} \n" +
+                $"Quantity: {Quantity} \n";
+            return data;
         }
     }
 }

@@ -28,10 +28,8 @@ namespace KioskApp.Services
 
                 foreach (var file in filesToDelete)
                 {
-                    Debug.WriteLine($"Deleting previous image: {file}");
-                    File.Delete(file); 
+                    File.Delete(file);
                 }
-
 
                 // Генерация уникального имени для изображения
                 var imageFileName = $"product_{product.Id}_{DateTime.UtcNow.Ticks}.jpg"; // Метка времени добавлена для уникальности
@@ -44,15 +42,12 @@ namespace KioskApp.Services
                 }
 
                 // Обновляем URL изображения продукта
-                product.ImageUrl = imageFileName; // Изменяем ImageUrl, чтобы хранить новое имя изображения
-
+                product.ImageUrl = imageFileName;
 
                 // Сохранение данных товара
                 var productFilePath = Path.Combine(_cacheDirectory, $"product_{product.Id}.json");
                 var productJson = JsonSerializer.Serialize(product);
                 await File.WriteAllTextAsync(productFilePath, productJson);
-
-                Debug.WriteLine($"Product {product.Id} cached successfully with new image.");
             }
             catch (Exception ex)
             {
@@ -60,7 +55,6 @@ namespace KioskApp.Services
                 throw;
             }
         }
-
 
         public async Task<Product> GetProductAsync(int productId)
         {
@@ -86,6 +80,12 @@ namespace KioskApp.Services
             try
             {
                 var product = await GetProductAsync(productId);
+
+                if (product == null || string.IsNullOrEmpty(product.ImageUrl))
+                {
+                    return null;
+                }
+
                 var imageFilePath = Path.Combine(_cacheDirectory, product.ImageUrl);
                 return File.Exists(imageFilePath) ? imageFilePath : null;
             }
@@ -95,6 +95,9 @@ namespace KioskApp.Services
                 throw;
             }
         }
+
+
+
 
 
         public void ClearCache()
@@ -169,6 +172,7 @@ namespace KioskApp.Services
                     Debug.WriteLine($"Description: {product.Description}");
                     Debug.WriteLine($"Price: {product.Price}");
                     Debug.WriteLine($"Stock: {product.Stock}");
+                    Debug.WriteLine($"ReservedStock: {product.ReservedStock}");
                     Debug.WriteLine($"Category: {product.Category}");
                     Debug.WriteLine($"Last Updated: {product.LastUpdated}");
                     Debug.WriteLine($"Image URL: {product.ImageUrl}");
@@ -199,7 +203,7 @@ namespace KioskApp.Services
                 foreach (var dir in directories)
                 {
                     Debug.WriteLine($"{indent}└── {Path.GetFileName(dir)}");
-                    
+
                     PrintCacheDirectoryStructure(dir, indent + "    ");
                 }
             }

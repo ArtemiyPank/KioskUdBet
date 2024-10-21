@@ -10,6 +10,8 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Syncfusion.Maui.ProgressBar;
 using System.Numerics;
+using System.Reflection;
+using KioskApp.Helpers;
 
 namespace KioskApp.ViewModels
 {
@@ -18,42 +20,34 @@ namespace KioskApp.ViewModels
         private readonly IOrderApiService _orderApiService;
         private readonly IUserService _userService;
         private readonly ISseService _sseService;
-
         private readonly IUpdateService _updateService;
-
         private readonly IProductApiService _productApiService;
+        private readonly ICacheService _cacheService;
+        private readonly AppState _appState;
 
         private CancellationTokenSource _cts; // токен для остановки мониторинга статуса заказа
 
-        // progressbar
+        // Прогрессбар для статусов заказа
         private ObservableCollection<StepProgressBarItem> _stepProgressItem;
         public ObservableCollection<StepProgressBarItem> StepProgressItem
         {
-            get
-            {
-                return _stepProgressItem;
-            }
-            set
-            {
-                _stepProgressItem = value;
-            }
+            get => _stepProgressItem;
+            set => _stepProgressItem = value;
         }
 
-        // Progress bar value: 0 - Order not placed, 1 - Placed, 2 - Assembling, 3 - Delivered
+        // Прогресс статуса заказа: 0 - не оформлен, 1 - оформлен, 2 - собирается, 3 - доставлен
         private int _orderStatusValue = 0;
         public int OrderStatusValue
         {
             get => _orderStatusValue;
             set
             {
-                Debug.WriteLine("OrderStatusValue was changed");
+                //Debug.WriteLine("OrderStatusValue was changed");
 
                 _orderStatusValue = value;
-
                 OrderStatusProgress = (value == 3) ? 100 : 40;
 
-                var orderStatusJson = System.Text.Json.JsonSerializer.Serialize(value);
-                Preferences.Set("orderStatus", orderStatusJson);
+                Preferences.Set("orderStatus", value.ToString());
 
                 OnPropertyChanged(nameof(OrderStatusValue));
                 OnPropertyChanged(nameof(IsOrderDelivered));
@@ -61,7 +55,6 @@ namespace KioskApp.ViewModels
         }
 
         public bool IsOrderDelivered => (_orderStatusValue == 3);
-
 
         private int _orderStatusProgress = 40;
         public int OrderStatusProgress
@@ -73,7 +66,6 @@ namespace KioskApp.ViewModels
                 OnPropertyChanged(nameof(OrderStatusProgress));
             }
         }
-
 
         private DateTime _selectedStartTime;
         public DateTime SelectedStartTime
@@ -106,18 +98,18 @@ namespace KioskApp.ViewModels
             set
             {
                 _isOrderPlaced = value;
-
                 OnPropertyChanged(nameof(IsOrderPlaced));
                 OnPropertyChanged(nameof(IsOrderNotPlaced));
             }
         }
         public bool IsOrderNotPlaced => !IsOrderPlaced;
 
-
         public string DeliveryLocation => $"{CurrentUser.Building}, Room {CurrentUser.RoomNumber}";
 
-        private int _orderId;
-        public ObservableCollection<OrderItem> CartItems { get; set; }
+        public Order? _currentOrder;
+
+        public ObservableCollection<OrderItem> CartItems => new ObservableCollection<OrderItem>((_currentOrder ?? new Order()).OrderItems);
+
 
         public ICommand NavigateToRegisterCommand { get; }
         public ICommand PlaceOrderCommand { get; }
@@ -132,267 +124,325 @@ namespace KioskApp.ViewModels
 
         public string SelectedTimeRangeText => $"Delivery time: {SelectedStartTime:HH:mm} - {SelectedEndTime:HH:mm}";
 
-
-
-        public CartViewModel(IOrderApiService orderApiService, IUserService userService, ISseService sseService, IProductApiService productApiService, IUpdateService updateService)
+        public CartViewModel(IOrderApiService orderApiService, IUserService userService, ISseService sseService, IProductApiService productApiService, IUpdateService updateService, ICacheService cacheService, AppState appState)
         {
-            _orderApiService = orderApiService;
-            _userService = userService;
-            _sseService = sseService;
-            _productApiService = productApiService;
-            _updateService = updateService;
-
-            NavigateToRegisterCommand = new Command(async () => await Shell.Current.GoToAsync("RegisterPage"));
-            PlaceOrderCommand = new Command(OnPlaceOrder);
-            PrepareForTheNextOrderCommand = new Command(PrepareForTheNextOrder);
-            AddToCartCommand = new Command<Product>(OnAddToCart);
-            IncreaseQuantityCommand = new Command<OrderItem>(OnIncreaseQuantity);
-            DecreaseQuantityCommand = new Command<OrderItem>(OnDecreaseQuantity);
-
-            CartItems = new ObservableCollection<OrderItem>();
-            LoadCartItems();
-
-
-            // range slider lables
-            SelectedStartTime = new DateTime(2024, 8, 27, 18, 0, 0);
-            SelectedEndTime = new DateTime(2024, 8, 27, 19, 0, 0);
-
-            // progress bar states 
-            _stepProgressItem = new ObservableCollection<StepProgressBarItem>();
-            _stepProgressItem.Add(new StepProgressBarItem() { PrimaryText = "Placed" });
-            _stepProgressItem.Add(new StepProgressBarItem() { PrimaryText = "Assembling" });
-            _stepProgressItem.Add(new StepProgressBarItem() { PrimaryText = "Delivered" });
-
-
-            var orderIdJson = Preferences.Get("OrderId", string.Empty);
-            if (!string.IsNullOrEmpty(orderIdJson))
+            try
             {
-                _orderId = System.Text.Json.JsonSerializer.Deserialize<int>(orderIdJson);
-                IsOrderPlaced = true;
+                Debug.WriteLine($"In CartViewModel");
+                _orderApiService = orderApiService;
+                _userService = userService;
+                _sseService = sseService;
+                _productApiService = productApiService;
+                _updateService = updateService;
+                _cacheService = cacheService;
+                _appState = appState;
 
-                _updateService.StartMonitoringOrderStatus(_orderId, UpdateOrderStatus);
+                NavigateToRegisterCommand = new Command(async () => await Shell.Current.GoToAsync("RegisterPage"));
+                PlaceOrderCommand = new Command(OnPlaceOrder);
+                PrepareForTheNextOrderCommand = new Command(PrepareForTheNextOrder);
+                AddToCartCommand = new Command<Product>(OnAddToCart);
+                IncreaseQuantityCommand = new Command<OrderItem>(OnIncreaseQuantity);
+                DecreaseQuantityCommand = new Command<OrderItem>(OnDecreaseQuantity);
 
-                //StartMonitoringOrderStatus(_orderId);
+
+                SelectedStartTime = new DateTime(2024, 8, 27, 18, 0, 0);
+                SelectedEndTime = new DateTime(2024, 8, 27, 19, 0, 0);
+
+                _stepProgressItem = new ObservableCollection<StepProgressBarItem>
+            {
+                new StepProgressBarItem() { PrimaryText = "Placed" },
+                new StepProgressBarItem() { PrimaryText = "Assembling" },
+                new StepProgressBarItem() { PrimaryText = "Delivered" }
+            };
+            }
+            catch (TargetInvocationException ex)
+            {
+                Debug.WriteLine($"Error: {ex.InnerException?.Message}");
+                Debug.WriteLine($"Stack Trace: {ex.InnerException?.StackTrace}");
             }
 
-            var orderStatusJson = Preferences.Get("orderStatus", string.Empty);
-            if (!string.IsNullOrEmpty(orderStatusJson))
-            {
-                OrderStatusValue = System.Text.Json.JsonSerializer.Deserialize<int>(orderStatusJson);
-            }
+            Debug.WriteLine($"Before LoadOrderFromServer()");
+
+            LoadOrderFromServer();
+
+            Debug.WriteLine($"After LoadOrderFromServer()");
         }
 
-
-        //// Запуск мониторинга статуса заказа через SSE
-        //public void StartMonitoringOrderStatus(int orderId)
-        //{
-        //    // Инициализация CancellationTokenSource
-        //    _cts = new CancellationTokenSource();
-
-        //    // Запуск мониторинга
-        //    _sseService.StartMonitoringOrderStatus(orderId, UpdateOrderStatus, _cts.Token);
-        //}
-
-        //// Остановка мониторинга статуса заказа
-        //public void StopMonitoringOrderStatus()
-        //{
-        //    if (_cts != null)
-        //    {
-        //        // Отмена задачи
-        //        _cts.Cancel();
-        //        _cts.Dispose();
-        //        _cts = null;
-        //    }
-        //}
-
-
-
-        private void PrepareForTheNextOrder()
+        // Загрузка кэшированного заказа
+        private async void LoadOrderFromServer()
         {
-            Debug.WriteLine("In PrepareForTheNextOrder");
-            CartItems.Clear();
-            OrderStatusValue = 0;
-            Preferences.Remove("CartItems");
-            Preferences.Remove("OrderId");
-            IsOrderPlaced = false;
-        }
+            Debug.WriteLine($"In LoadOrderFromServer");
+            _currentOrder = await _orderApiService.GetLastOrderOrCreateEmpty(CurrentUser.Id);
 
-        private void LoadCartItems()
-        {
-            var cartItemsJson = Preferences.Get("CartItems", string.Empty);
-            if (!string.IsNullOrEmpty(cartItemsJson))
+            foreach (var item in _currentOrder.OrderItems)
             {
-                var savedCartItems = System.Text.Json.JsonSerializer.Deserialize<List<OrderItem>>(cartItemsJson);
-                CartItems = new ObservableCollection<OrderItem>(savedCartItems);
-                OnPropertyChanged(nameof(CartItems));
+                item.Product.ImageUrl = await _cacheService.GetProductImagePath(item.ProductId);
             }
-        }
 
-        private async void OnAddToCart(Product product)
-        {
-            Debug.WriteLine($"_orderStatusValue - {_orderStatusValue}");
+            _updateService.StartMonitoringOrderStatus(_currentOrder.Id, UpdateOrderStatus);
+            UpdateOrderStatus(_currentOrder.Status);
 
-            if (_orderStatusValue == 3) PrepareForTheNextOrder();
 
-            var existingItem = CartItems.FirstOrDefault(c => c.ProductId == product.Id);
+            Debug.WriteLine(_currentOrder.ToString());
 
-            // Если товар уже есть в корзине, увеличиваем количество
-            if (existingItem != null)
+            Debug.WriteLine("-------CartItems-------");
+            foreach (var item in CartItems)
             {
-                if (product.Stock - product.ReservedStock > existingItem.Quantity)
-                {
-                    existingItem.Quantity++;
-                    await ReserveProductStockAsync(product.Id, 1); // Резервируем 1 единицу товара
-                }
-                else
-                {
-                    await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
-                }
+                Debug.WriteLine(item.ToString());
             }
-            else
-            {
-                if (product.Stock - product.ReservedStock > 0)
-                {
-                    CartItems.Add(new OrderItem
-                    {
-                        ProductId = product.Id,
-                        Product = product,
-                        Quantity = 1
-                    });
-                    await ReserveProductStockAsync(product.Id, 1); // Резервируем 1 единицу товара
-                }
-                else
-                {
-                    await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
-                }
-            }
+
 
             OnPropertyChanged(nameof(CartItems));
-            SaveCartItems();
+
+
+        }
+
+        private async void PrepareForTheNextOrder()
+        {
+            Debug.WriteLine("In PrepareForTheNextOrder");
+            OrderStatusValue = 0;
+
+            IsOrderPlaced = false;
+
+            _updateService.StopMonitoringOrderStatus();
+
+            _currentOrder = await _orderApiService.CreateEmptyOrder(CurrentUser);
+            _updateService.StartMonitoringOrderStatus(_currentOrder.Id, UpdateOrderStatus);
+
+            OnPropertyChanged(nameof(CartItems));
+
+
+        }
+
+
+        public async void OnAddToCart(Product product)
+        {
+            Debug.WriteLine($"Attempting to add product {product.Id} to cart.");
+
+            try
+            {
+                if (!_currentOrder.UpdateOrderItems(_appState))
+                {
+                    Debug.WriteLine("Updating of OrderItems was failed");
+
+                }
+
+
+                var existingItem = _currentOrder.OrderItems.FirstOrDefault(c => c.ProductId == product.Id);
+                if (existingItem != null)
+                {
+                    if (product.AvailableStock > existingItem.Quantity)
+                    {
+                        existingItem.Quantity++;
+                        Debug.WriteLine($"Increased quantity of product {product.Id} to {existingItem.Quantity}.");
+                        await _productApiService.ReserveProductStock(product.Id, 1);
+                        Debug.WriteLine("Stock successfully reserved.");
+                    }
+                    else
+                    {
+                        await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
+                        Debug.WriteLine($"Not enough stock for product {product.Id}.");
+                    }
+                }
+                else
+                {
+                    if (product.AvailableStock > 0)
+                    {
+                        var newItem = new OrderItem
+                        {
+                            ProductId = product.Id,
+                            Product = product,
+                            Quantity = 1
+                        };
+                        _currentOrder.OrderItems.Add(newItem);
+                        Debug.WriteLine($"Added new product {product.Id} to cart.");
+                        await _productApiService.ReserveProductStock(product.Id, 1);
+                        Debug.WriteLine("Stock successfully reserved.");
+                    }
+                    else
+                    {
+                        await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
+                        Debug.WriteLine($"Not enough stock for product {product.Id}.");
+                    }
+                }
+
+                OnPropertyChanged(nameof(CartItems));
+
+                // Обновляем заказ на сервере после добавления товара
+                var order = new Order
+                {
+                    Id = _currentOrder.Id,
+                    OrderItems = _currentOrder.OrderItems.ToList(),
+                    UserId = CurrentUser.Id,
+                    User = CurrentUser
+                };
+                await _orderApiService.UpdateOrder(order);
+                Debug.WriteLine("Order successfully updated on server.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error adding product {product.Id} to cart: {ex.Message}");
+            }
         }
 
 
         private async void OnIncreaseQuantity(OrderItem item)
         {
-            if (item.Product.Stock - item.Product.ReservedStock > item.Quantity)
+            try
             {
-                item.Quantity++;
-                await ReserveProductStockAsync(item.Product.Id, 1); // Резервируем 1 единицу товара
-            }
-            else
-            {
-                await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
-            }
+                //await _cacheService.LogProductCache();
+                if (!_currentOrder.UpdateOrderItems(_appState))
+                {
+                    Debug.WriteLine("Updating of OrderItems was failed");
 
-            OnPropertyChanged(nameof(CartItems));
-            SaveCartItems();
+                }   
+
+                Debug.WriteLine($"Item Id: {item.ProductId}");
+                Debug.WriteLine($"Increasing quantity for product {item.ProductId}.");
+                var orderItem = _currentOrder.OrderItems.FirstOrDefault(c => c.ProductId == item.ProductId);
+
+                Debug.WriteLine($"Before: {orderItem.ToString()}");
+
+                if (orderItem.Product.AvailableStock > item.Quantity)
+                {
+                    orderItem.Quantity++;
+                    await _productApiService.ReserveProductStock(item.ProductId, 1);
+                }
+                else
+                {
+                    await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
+                }
+
+                Debug.WriteLine($"After: {orderItem.ToString()}");
+                //Debug.WriteLine(_currentOrder.ItemsToString());
+
+
+                Debug.WriteLine("Updating order on the server.");
+                await _orderApiService.UpdateOrder(_currentOrder);
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
         }
-
 
         private async void OnDecreaseQuantity(OrderItem item)
         {
-            if (item.Quantity > 1)
+            if (!_currentOrder.UpdateOrderItems(_appState))
             {
-                item.Quantity--;
-                await ReleaseProductStockAsync(item.Product.Id, 1); // Освобождаем 1 единицу товара
+                Debug.WriteLine("Updating of OrderItems was failed");
+
+            }
+
+            Debug.WriteLine($"Item Id: {item.ProductId}");
+            Debug.WriteLine($"Decreasing quantity for product {item.ProductId}.");
+
+            var orderItem = _currentOrder.OrderItems.FirstOrDefault(c => c.ProductId == item.ProductId);
+            Debug.WriteLine(orderItem.ToString());
+
+            if (orderItem.Quantity > 1)
+            {
+                orderItem.Quantity--;
+                await _productApiService.ReleaseProductStock(item.ProductId, 1);
             }
             else
             {
-                CartItems.Remove(item);
-                await ReleaseProductStockAsync(item.Product.Id, item.Quantity); // Освобождаем все количество товара
+                Debug.WriteLine("Remove(orderItem)");
+                _currentOrder.OrderItems.Remove(orderItem);
+                OnPropertyChanged(nameof(CartItems));
+
+                Debug.WriteLine($"item.ProductId: {item.ProductId}, item.Quantity: {item.Quantity}");
+                await _productApiService.ReleaseProductStock(item.ProductId, item.Quantity);
             }
+            Debug.WriteLine(orderItem.ToString());
+            Debug.WriteLine(_currentOrder.ItemsToString());
 
-            OnPropertyChanged(nameof(CartItems));
-            SaveCartItems();
+            Debug.WriteLine("Updating order on the server.");
+            await _orderApiService.UpdateOrder(_currentOrder);
+
         }
 
-        private async Task ReserveProductStockAsync(int productId, int quantity)
-        {
-            var response = await _productApiService.ReserveProductStock(productId, quantity);
-            if (!response.IsSuccessStatusCode)
-            {
-                Debug.WriteLine($"Failed to reserve stock for product {productId}");
-                await Application.Current.MainPage.DisplayAlert("Stock Error", "Failed to reserve stock", "OK");
-            }
-        }
-
-        private async Task ReleaseProductStockAsync(int productId, int quantity)
-        {
-            var response = await _productApiService.ReleaseProductStock(productId, quantity);
-            if (!response.IsSuccessStatusCode)
-            {
-                Debug.WriteLine($"Failed to release stock for product {productId}");
-                await Application.Current.MainPage.DisplayAlert("Stock Error", "Failed to release stock", "OK");
-            }
-        }
-
-
-        private void SaveCartItems()
-        {
-            var cartItemsJson = System.Text.Json.JsonSerializer.Serialize(CartItems);
-            Preferences.Set("CartItems", cartItemsJson);
-        }
 
         private async void OnPlaceOrder()
         {
+            Debug.WriteLine("Placing order.");
+
             if (!CartItems.Any())
             {
+                Debug.WriteLine("Cart is empty. Cannot place order.");
                 await Application.Current.MainPage.DisplayAlert("Cart is Empty", "Please add items to your cart before placing an order.", "OK");
                 return;
             }
 
-            if (CurrentUser == null)
+            var currentUser = _userService.GetCurrentUser();
+            if (currentUser == null)
             {
-                Debug.WriteLine("Error: CurrentUser is null.");
-                await Application.Current.MainPage.DisplayAlert("Error", "User information is missing. Please log in again.", "OK");
+                Debug.WriteLine("User not logged in.");
+                await Application.Current.MainPage.DisplayAlert("Error", "User not logged in. Please log in again.", "OK");
                 return;
             }
 
-            var order = new Order(CurrentUser, CartItems.ToList())
+            var order = new Order
             {
-                DeliveryStartTime = SelectedStartTime,
-                DeliveryEndTime = SelectedEndTime,
+                Id = _currentOrder.Id,
+                UserId = currentUser.Id,
+                User = currentUser,
+                OrderItems = CartItems.ToList(),
+                CreationTime = DateTime.Now
             };
 
-            Debug.WriteLine(order.ToString());
-
-            order = await _orderApiService.PlaceOrder(order);
+            await _orderApiService.UpdateOrderStatus(_currentOrder.Id, "Placed");
+            UpdateOrderStatus("Placed");
+            //await _orderApiService.PlaceOrder(order);
+            Debug.WriteLine("Order placed successfully.");
             await Application.Current.MainPage.DisplayAlert("Order Placed", "Your order has been placed successfully!", "OK");
 
-            IsOrderPlaced = true;
-            OrderStatusValue = 1; // (Order Placed)
-            _orderId = order.Id;
-
-            var orderJson = System.Text.Json.JsonSerializer.Serialize(_orderId);
-            Preferences.Set("OrderId", orderJson);
-
-            //// launching update service
-            //StartMonitoringOrderStatus(_orderId);
+            CartItems.Clear();
         }
-
 
         private void UpdateOrderStatus(string status)
         {
-            Debug.WriteLine("In UpdateOrderStatus");
+
+            var Cods = new Dictionary<string, string>()
+            {
+                { "0", "Not placed"},
+                { "1", "Placed"},
+                { "2", "Assembling"},
+                { "3", "Delivered"},
+                { "Not placed", "Not placed"},
+                { "Placed", "Placed"},
+                { "Assembling", "Assembling"},
+                { "Delivered", "Delivered"}
+            };
+
+            status = Cods[status];
+
+            //Debug.WriteLine($"Updating order status to {status}.");
             switch (status)
             {
+                case "Not placed":
+                    OrderStatusValue = 0;
+                    IsOrderPlaced = false;
+                    break;
                 case "Placed":
                     OrderStatusValue = 1;
+                    IsOrderPlaced = true;
                     break;
                 case "Assembling":
-                    Debug.WriteLine($"Assembling");
+                    Debug.WriteLine("Order is assembling.");
                     OrderStatusValue = 2;
+                    IsOrderPlaced = true;
                     break;
                 case "Delivered":
-                    Debug.WriteLine($"Delivered");
+                    Debug.WriteLine("Order is delivered.");
                     OrderStatusValue = 3;
-
                     _updateService.StopMonitoringOrderStatus();
-                    //StopMonitoringOrderStatus(); // Остановка мониторинга статуса заказа после его доставки
+                    IsOrderPlaced = true;
                     break;
             }
 
+            //Debug.WriteLine("End of UpdateOrderStatus(string status)");
         }
-
     }
 }

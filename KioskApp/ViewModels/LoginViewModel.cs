@@ -60,23 +60,32 @@ namespace KioskApp.ViewModels
 
         public async Task<bool> Login()
         {
+
+            //Debug.WriteLine("In Login() !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
             if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Password))
             {
                 ErrorMessage = "Email and Password cannot be empty.";
                 return false;
             }
+            //Debug.WriteLine("--------- flag 1 --------- In Login()");
+            //Debug.WriteLine($"Email: {Email}; Password: {Password}");
 
             var authResponse = await _userService.Authenticate(Email, Password);
+            //Debug.WriteLine("--------- flag 2 --------- In Login()");
             if (authResponse != null && authResponse.IsSuccess)
             {
                 Debug.WriteLine($"Authenticated User in LoginViewModel: {authResponse.Data.Email}");
                 await Shell.Current.GoToAsync(".."); // Navigate to previous page (ProfilePage)
+                //Debug.WriteLine("--------- flag 3.1 --------- In Login()");
 
                 return true;
             }
             else
             {
                 ErrorMessage = authResponse?.Message ?? "Login failed.";
+                //Debug.WriteLine("--------- flag 3.2 --------- In Login()");
+
                 return false;
             }
         }

@@ -25,6 +25,7 @@ namespace KioskApp.Services
         {
             try
             {
+                //Debug.WriteLine("Checking status");
                 var status = await _orderApiService.GetOrderStatus(_orderId);
                 if (status != null)
                 {

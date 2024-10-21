@@ -51,6 +51,31 @@ namespace KioskApp.Services
             return await response.Content.ReadFromJsonAsync<List<Order>>();
         }
 
+
+        public async Task<Order> GetLastOrderOrCreateEmpty(int userId)
+        {
+            Debug.WriteLine("In GetLastOrderOrCreateEmpty()");
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Get, $"/api/order/user/{userId}/lastOrder");
+            });
+
+            // Попытка десериализовать
+            var order = await response.Content.ReadFromJsonAsync<Order>();
+
+            if (order == null)
+            {
+                Debug.WriteLine("Error: order is null after deserialization.");
+            }
+            else
+            {
+                Debug.WriteLine($"Order deserialized successfully: {order}");
+            }
+
+            return order;
+        }
+
+
         public async Task<Order> GetOrderById(int orderId)
         {
             var response = await _userApiService.SendRequestAsync(() =>
@@ -74,7 +99,6 @@ namespace KioskApp.Services
 
             return response.IsSuccessStatusCode;
         }
-
 
         public async Task<string> GetOrderStatus(int orderId)
         {
@@ -101,9 +125,45 @@ namespace KioskApp.Services
             }
         }
 
-        public Task<bool> UpdateOrder(Order order)
+        public async Task<bool> CancelOrder(int orderId)
         {
-            throw new NotImplementedException();
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Put, $"api/order/{orderId}/cancelOrder");
+            });
+
+            return response.IsSuccessStatusCode;
+        }
+
+        // Новый метод для обновления заказа
+        public async Task<bool> UpdateOrder(Order order)
+        {
+            Debug.WriteLine("In UpdateOrder");
+            //Debug.WriteLine(JsonSerializer.Serialize(order, new JsonSerializerOptions { WriteIndented = true }));
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Put, $"api/order/{order.Id}/updateOrder")
+                {
+                    Content = JsonContent.Create(order)
+                };
+            });
+
+            return response.IsSuccessStatusCode;
+        }
+
+        // Метод для создания нового пустого заказа после доставки
+        public async Task<Order> CreateEmptyOrder(User user)
+        {
+            var response = await _userApiService.SendRequestAsync(() =>
+            {
+                return new HttpRequestMessage(HttpMethod.Post, "api/order/createEmptyOrder")
+                {
+                    Content = JsonContent.Create(user)
+                };
+            });
+
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<Order>();
         }
     }
 }
