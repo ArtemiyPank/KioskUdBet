@@ -19,7 +19,8 @@ namespace KioskAPI.Services
         Task<int> GetStock(int productId); // Получение доступного количества товара
         Task<int> GetReservedStock(int productId); // Получение зарезервированного количества товара
 
-        // Подтверждение заказа при доставке
-        Task ConfirmOrderAsync(int productId, int quantity);
+        Task DeletingDeliveredProducts(int productId, int quantity); // Удаление доставленного товара
+        
+        Task ConfirmOrderAsync(int productId, int quantity); // Подтверждение заказа при доставке
     }
 }

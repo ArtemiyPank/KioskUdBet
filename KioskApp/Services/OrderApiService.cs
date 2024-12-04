@@ -54,26 +54,37 @@ namespace KioskApp.Services
 
         public async Task<Order> GetLastOrderOrCreateEmpty(int userId)
         {
-            Debug.WriteLine("In GetLastOrderOrCreateEmpty()");
-            var response = await _userApiService.SendRequestAsync(() =>
+            try
             {
-                return new HttpRequestMessage(HttpMethod.Get, $"/api/order/user/{userId}/lastOrder");
-            });
+                // Установить флаг десериализации
+                DeserializationHelper.IsDeserializing = true;
 
-            // Попытка десериализовать
-            var order = await response.Content.ReadFromJsonAsync<Order>();
+                var response = await _userApiService.SendRequestAsync(() =>
+                {
+                    Debug.WriteLine($"Sending GET request to /api/order/user/{userId}/lastOrder");
+                    return new HttpRequestMessage(HttpMethod.Get, $"/api/order/user/{userId}/lastOrder");
+                });
 
-            if (order == null)
-            {
-                Debug.WriteLine("Error: order is null after deserialization.");
+                Debug.WriteLine($"Response Status Code: {response.StatusCode}");
+                Debug.WriteLine($"Response Content: {await response.Content.ReadAsStringAsync()}");
+
+                var order = await response.Content.ReadFromJsonAsync<Order>();
+
+                return order;
             }
-            else
+            catch (Exception ex)
             {
-                Debug.WriteLine($"Order deserialized successfully: {order}");
+                Debug.WriteLine($"Exception in GetLastOrderOrCreateEmpty: {ex.Message}");
+                throw;
             }
-
-            return order;
+            finally
+            {
+                // Сбросить флаг десериализации
+                DeserializationHelper.IsDeserializing = false;
+            }
         }
+
+
 
 
         public async Task<Order> GetOrderById(int orderId)

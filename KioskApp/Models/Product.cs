@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using KioskApp.Helpers;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
@@ -59,6 +60,7 @@ public class Product : INotifyPropertyChanged
     // Метод для резервирования товара
     public void ReserveStock(int quantity)
     {
+        if (DeserializationHelper.IsDeserializing) return;
         Debug.WriteLine($"Attempting to reserve {quantity} units. Available stock: {AvailableStock}, Reserved stock: {ReservedStock}, Total stock: {Stock}");
 
         if (AvailableStock >= quantity)
@@ -77,6 +79,7 @@ public class Product : INotifyPropertyChanged
     // Метод для освобождения товара
     public void ReleaseStock(int quantity)
     {
+        if (DeserializationHelper.IsDeserializing) return;
         if (ReservedStock >= quantity)
         {
             ReservedStock -= quantity;

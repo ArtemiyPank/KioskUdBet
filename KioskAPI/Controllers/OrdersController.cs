@@ -47,34 +47,6 @@ namespace KioskAPI.Controllers
             }
         }
 
-        //// POST: api/order/placeOrder
-        //[HttpPost("placeOrder")]
-        //public async Task<IActionResult> CreateOrder([FromBody] Order order)
-        //{
-        //    if (order == null)
-        //    {
-        //        Console.WriteLine("Order is null");
-        //        return BadRequest(new { Message = "Order is null" });
-        //    }
-
-        //    try
-        //    {
-        //        Console.WriteLine($"Placing order for user {order.UserId}");
-        //        foreach (var item in order.OrderItems)
-        //        {
-        //            Console.WriteLine($"Reserving product {item.ProductId} with quantity {item.Quantity}");
-        //            item.ReserveProduct(); // Резервируем товар
-        //        }
-        //        await _orderService.CreateOrderAsync(order);
-        //        Console.WriteLine($"Order placed with ID {order.Id}");
-        //        return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Error placing order: {ex.Message}");
-        //        return StatusCode(500, new { Message = "Internal server error" });
-        //    }
-        //}
 
         // PUT: api/order/{id}/updateOrder
         [HttpPut("{id}/updateOrder")]
@@ -102,46 +74,6 @@ namespace KioskAPI.Controllers
             }
         }
 
-
-
-
-        // PUT: api/order/{id}/deliver
-        [HttpPut("{id}/deliver")]
-        public async Task<IActionResult> DeliverOrder(int id)
-        {
-            Console.WriteLine($"Delivering order {id}");
-            var order = await _orderService.GetOrderByIdAsync(id);
-            if (order == null)
-            {
-                Console.WriteLine($"Order {id} not found");
-                return NotFound(new { Message = "Order not found" });
-            }
-
-            try
-            {
-                order.Status = "Delivered";
-
-                foreach (var item in order.OrderItems)
-                {
-                    Console.WriteLine($"Confirming product {item.ProductId} with quantity {item.Quantity}");
-                    item.Product.ConfirmOrder(item.Quantity); // Обновляем количество на складе
-                }
-
-                await _orderService.UpdateOrderStatusAsync(id, order.Status);
-                Console.WriteLine($"Order {id} delivered");
-
-                var newOrder = Order.CreateNewEmptyOrder(order.User);
-                await _orderService.CreateOrderAsync(newOrder);
-                Console.WriteLine($"New empty order created with ID {newOrder.Id} after delivery");
-
-                return Ok(new { NewOrderId = newOrder.Id });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error delivering order {id}: {ex.Message}");
-                return StatusCode(500, new { Message = "Internal server error" });
-            }
-        }
 
         // PUT: api/order/{id}/cancelOrder
         [HttpPut("{id}/cancelOrder")]
@@ -255,6 +187,13 @@ namespace KioskAPI.Controllers
                 Console.WriteLine($"Updating status of order {id} to {status}");
                 await _orderService.UpdateOrderStatusAsync(id, status);
                 Console.WriteLine($"Order {id} status updated to {status}");
+
+                if(status == "Delivered")
+                {
+                    Order order = await _orderService.GetOrderByIdAsync(id);
+                    await _orderService.UpdatingQuantityForDeliveredOrderAsync(order);
+                }
+
                 return NoContent();
             }
             catch (Exception ex)

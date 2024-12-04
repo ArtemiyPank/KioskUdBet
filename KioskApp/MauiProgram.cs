@@ -4,6 +4,7 @@ using KioskApp.Models;
 using KioskApp.Services;
 using KioskApp.ViewModels;
 using KioskApp.Views;
+
 using Microsoft.Extensions.Logging;
 using Syncfusion.Maui.Core.Hosting;
 using System.Net.Http;

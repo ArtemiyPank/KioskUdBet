@@ -9,10 +9,13 @@ namespace KioskAPI.Services
 {
     public class OrderService : IOrderService
     {
+        private readonly IProductService _productService;
+
         private readonly ApplicationDbContext _context;
 
-        public OrderService(ApplicationDbContext context)
+        public OrderService(IProductService productService, ApplicationDbContext context)
         {
+            _productService = productService;
             _context = context;
         }
 
@@ -133,7 +136,21 @@ namespace KioskAPI.Services
         }
 
 
-
+        public async Task UpdatingQuantityForDeliveredOrderAsync(Order order)
+        {
+            foreach (var item in order.OrderItems)
+            {
+                try
+                {
+                    Console.WriteLine($"Updating product {item.ProductId} with delivered quantity {item.Quantity}.");
+                    await _productService.DeletingDeliveredProducts(item.ProductId, item.Quantity);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error updating product {item.ProductId}: {ex.Message}");
+                }
+            }
+        }
 
 
 

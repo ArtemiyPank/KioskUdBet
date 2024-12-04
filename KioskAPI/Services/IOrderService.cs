@@ -10,10 +10,12 @@ namespace KioskAPI.Services
         Task CreateNewEmptyOrder(User user);
         Task<Order> GetOrderByIdAsync(int id); // Получение заказа по ID
         Task UpdateOrderStatusAsync(int id, string status); // Обновление статуса заказа
+        Task UpdatingQuantityForDeliveredOrderAsync(Order order); // Обновление количества товара для доставленного заказа
         Task DeleteOrderAsync(int id); // Удаление заказа
         Task<Order?> GetLastOrderForUserAsync(int userId); // Получение последнего заказа
         Task<List<Order>> GetAllOrdersAsync(); // Получение всех заказов
         Task<Order> UpdateOrderAsync(Order order); // Обновления заказа
+
         Task<IEnumerable<OrderItem>> GetOrderItemsForOrderAsync(int orderId); // получение всех элементов звказа
     }
 }

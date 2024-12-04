@@ -161,41 +161,35 @@ namespace KioskApp.ViewModels
                 Debug.WriteLine($"Stack Trace: {ex.InnerException?.StackTrace}");
             }
 
-            Debug.WriteLine($"Before LoadOrderFromServer()");
-
             LoadOrderFromServer();
-
-            Debug.WriteLine($"After LoadOrderFromServer()");
         }
 
         // Загрузка кэшированного заказа
         private async void LoadOrderFromServer()
         {
-            Debug.WriteLine($"In LoadOrderFromServer");
-            _currentOrder = await _orderApiService.GetLastOrderOrCreateEmpty(CurrentUser.Id);
-
-            foreach (var item in _currentOrder.OrderItems)
+            try
             {
-                item.Product.ImageUrl = await _cacheService.GetProductImagePath(item.ProductId);
+                _currentOrder = await _orderApiService.GetLastOrderOrCreateEmpty(CurrentUser.Id);
+                foreach (var item in _currentOrder.OrderItems)
+                {
+                    item.Product.ImageUrl = await _cacheService.GetProductImagePath(item.ProductId);
+                }
+
+                _updateService.StartMonitoringOrderStatus(_currentOrder.Id, UpdateOrderStatus);
+                UpdateOrderStatus(_currentOrder.Status);
+
+                Debug.WriteLine(_currentOrder.ToString());
             }
-
-            _updateService.StartMonitoringOrderStatus(_currentOrder.Id, UpdateOrderStatus);
-            UpdateOrderStatus(_currentOrder.Status);
-
-
-            Debug.WriteLine(_currentOrder.ToString());
-
-            Debug.WriteLine("-------CartItems-------");
-            foreach (var item in CartItems)
+            catch (Exception ex)
             {
-                Debug.WriteLine(item.ToString());
+                Debug.WriteLine($"Error in LoadOrderFromServer: {ex.Message}");
             }
-
-
-            OnPropertyChanged(nameof(CartItems));
-
-
+            finally
+            {
+                OnPropertyChanged(nameof(CartItems));
+            }
         }
+
 
         private async void PrepareForTheNextOrder()
         {
@@ -221,31 +215,26 @@ namespace KioskApp.ViewModels
 
             try
             {
-                if (!_currentOrder.UpdateOrderItems(_appState))
-                {
-                    Debug.WriteLine("Updating of OrderItems was failed");
-
-                }
-
-
+                Debug.WriteLine($"Current order ID: {_currentOrder.Id}");
                 var existingItem = _currentOrder.OrderItems.FirstOrDefault(c => c.ProductId == product.Id);
                 if (existingItem != null)
                 {
+                    Debug.WriteLine($"Product {product.Id} exists in the cart. Current quantity: {existingItem.Quantity}");
                     if (product.AvailableStock > existingItem.Quantity)
                     {
                         existingItem.Quantity++;
                         Debug.WriteLine($"Increased quantity of product {product.Id} to {existingItem.Quantity}.");
                         await _productApiService.ReserveProductStock(product.Id, 1);
-                        Debug.WriteLine("Stock successfully reserved.");
                     }
                     else
                     {
-                        await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
                         Debug.WriteLine($"Not enough stock for product {product.Id}.");
+                        await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
                     }
                 }
                 else
                 {
+                    Debug.WriteLine($"Product {product.Id} is not in the cart. Adding it.");
                     if (product.AvailableStock > 0)
                     {
                         var newItem = new OrderItem
@@ -257,26 +246,18 @@ namespace KioskApp.ViewModels
                         _currentOrder.OrderItems.Add(newItem);
                         Debug.WriteLine($"Added new product {product.Id} to cart.");
                         await _productApiService.ReserveProductStock(product.Id, 1);
-                        Debug.WriteLine("Stock successfully reserved.");
                     }
                     else
                     {
-                        await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
                         Debug.WriteLine($"Not enough stock for product {product.Id}.");
+                        await Application.Current.MainPage.DisplayAlert("Stock", "Not enough stock available.", "OK");
                     }
                 }
 
                 OnPropertyChanged(nameof(CartItems));
 
-                // Обновляем заказ на сервере после добавления товара
-                var order = new Order
-                {
-                    Id = _currentOrder.Id,
-                    OrderItems = _currentOrder.OrderItems.ToList(),
-                    UserId = CurrentUser.Id,
-                    User = CurrentUser
-                };
-                await _orderApiService.UpdateOrder(order);
+                Debug.WriteLine($"Updating order with ID {_currentOrder.Id} on the server.");
+                await _orderApiService.UpdateOrder(_currentOrder);
                 Debug.WriteLine("Order successfully updated on server.");
             }
             catch (Exception ex)
@@ -284,6 +265,7 @@ namespace KioskApp.ViewModels
                 Debug.WriteLine($"Error adding product {product.Id} to cart: {ex.Message}");
             }
         }
+
 
 
         private async void OnIncreaseQuantity(OrderItem item)
@@ -301,9 +283,7 @@ namespace KioskApp.ViewModels
                 Debug.WriteLine($"Increasing quantity for product {item.ProductId}.");
                 var orderItem = _currentOrder.OrderItems.FirstOrDefault(c => c.ProductId == item.ProductId);
 
-                Debug.WriteLine($"Before: {orderItem.ToString()}");
-
-                if (orderItem.Product.AvailableStock > item.Quantity)
+                if (orderItem.Product.AvailableStock >= item.Quantity)
                 {
                     orderItem.Quantity++;
                     await _productApiService.ReserveProductStock(item.ProductId, 1);
@@ -394,7 +374,6 @@ namespace KioskApp.ViewModels
 
             await _orderApiService.UpdateOrderStatus(_currentOrder.Id, "Placed");
             UpdateOrderStatus("Placed");
-            //await _orderApiService.PlaceOrder(order);
             Debug.WriteLine("Order placed successfully.");
             await Application.Current.MainPage.DisplayAlert("Order Placed", "Your order has been placed successfully!", "OK");
 
@@ -403,7 +382,7 @@ namespace KioskApp.ViewModels
 
         private void UpdateOrderStatus(string status)
         {
-
+            Debug.WriteLine($"Updating order status to {status}");
             var Cods = new Dictionary<string, string>()
             {
                 { "0", "Not placed"},
@@ -442,7 +421,6 @@ namespace KioskApp.ViewModels
                     break;
             }
 
-            //Debug.WriteLine("End of UpdateOrderStatus(string status)");
         }
     }
 }

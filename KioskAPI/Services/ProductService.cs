@@ -3,6 +3,7 @@ using KioskAPI.Data;
 using KioskAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -152,6 +153,15 @@ namespace KioskAPI.Services
 
             product.ConfirmOrder(quantity); // Обновляем количество на складе
             await _context.SaveChangesAsync();
+        }
+
+
+        public async Task DeletingDeliveredProducts(int productId, int quantity)
+        {
+            Product product = await GetProductByIdAsync(productId);
+            product.ConfirmOrder(quantity);
+            await UpdateProduct(productId, product);
+
         }
     }
 }

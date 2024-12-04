@@ -1,6 +1,7 @@
 ﻿using KioskApp.Helpers;
 using System.ComponentModel;
 using System.Diagnostics;
+using KioskApp.Helpers;
 
 namespace KioskApp.Models
 {
@@ -33,7 +34,8 @@ namespace KioskApp.Models
 
 
 
-        public decimal TotalPrice => (decimal)(Product.Price * Quantity);
+        public decimal TotalPrice => Product?.Price * Quantity ?? 0;
+
 
         private int _quantity;
         public int Quantity
@@ -45,10 +47,12 @@ namespace KioskApp.Models
                 {
                     if (_quantity > value)
                     {
+                        Debug.WriteLine($"Releasing stock for Product ID: {ProductId}, Amount: {_quantity - value}");
                         Product.ReleaseStock(_quantity - value); // Освобождаем зарезервированный товар
                     }
                     else
                     {
+                        Debug.WriteLine($"Reserving stock for Product ID: {ProductId}, Amount: {value - _quantity}");
                         Product.ReserveStock(value - _quantity); // Резервируем дополнительное количество товара
                     }
 
@@ -58,6 +62,8 @@ namespace KioskApp.Models
                 }
             }
         }
+
+
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged(string propertyName)
