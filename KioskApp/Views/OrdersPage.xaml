@@ -5,44 +5,133 @@
              x:Class="KioskApp.Views.OrdersPage"
              Title="Orders">
 
-    <StackLayout>
-        <Button Text="Reload Orders" Command="{Binding ReloadOrdersCommand}" />
-        <ListView ItemsSource="{Binding Orders}" HasUnevenRows="True">
+    <!-- Minimal styles for headers and details -->
+    <ContentPage.Resources>
+        <Style x:Key="HeaderLabelStyle"
+               TargetType="Label">
+            <Setter Property="FontSize"
+                    Value="14" />
+            <Setter Property="FontAttributes"
+                    Value="Bold" />
+            <Setter Property="TextColor"
+                    Value="Black" />
+        </Style>
+        <Style x:Key="DetailLabelStyle"
+               TargetType="Label">
+            <Setter Property="FontSize"
+                    Value="12" />
+            <Setter Property="TextColor"
+                    Value="Black" />
+        </Style>
+    </ContentPage.Resources>
+
+    <StackLayout Padding="5">
+        <!-- Button to manually reload orders -->
+        <Button Text="Reload Orders"
+                Command="{Binding ReloadOrdersCommand}"
+                Margin="0,10,0,0" />
+        
+        <!-- ListView for all orders -->
+        <ListView ItemsSource="{Binding Orders}"
+                  HasUnevenRows="True"
+                  SeparatorVisibility="None">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <ViewCell>
-                        <StackLayout Padding="10">
-                            <!-- Display the status on each order card -->
-                            <HorizontalStackLayout>
-                                <Label Text="Status:"
-                                       FontAttributes="Bold" />
-                                <Label Text="{Binding Status}" />
-                            </HorizontalStackLayout>
+                        <Frame HasShadow="False"
+                               Padding="5"
+                               Margin="2"
+                               BorderColor="LightGray">
+                            <StackLayout Spacing="8">
+                                <!-- Order Header with basic details -->
+                                <Grid ColumnSpacing="5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- Order information -->
+                                    <Label Text="Order Details"
+                                           Style="{StaticResource HeaderLabelStyle}"
+                                           Grid.Row="0"
+                                           Grid.Column="0" />
+                                    <Label Text="{Binding Status}"
+                                           Style="{StaticResource DetailLabelStyle}"
+                                           TextColor="DarkBlue"
+                                           Grid.Row="0"
+                                           Grid.Column="1"
+                                           HorizontalTextAlignment="End" />
+                                    <Label Text="{Binding User.FirstName} {Binding User.LastName}"
+                                           Style="{StaticResource DetailLabelStyle}"
+                                           Grid.Row="1"
+                                           Grid.Column="0" />
+                                    <Label Text="{Binding Building}"
+                                           Style="{StaticResource DetailLabelStyle}"
+                                           Grid.Row="1"
+                                           Grid.Column="1"
+                                           HorizontalTextAlignment="End" />
+                                </Grid>
 
-                            <Label Text="Order Details" FontSize="Medium" FontAttributes="Bold" />
-                            <Label Text="{Binding User.FirstName}" FontSize="Small" />
-                            <Label Text="{Binding User.LastName}" FontSize="Small" />
-                            <Label Text="{Binding Building}" FontSize="Small" />
-                            <Label Text="{Binding RoomNumber}" FontSize="Small" />
-                            <Label Text="{Binding DeliveryStartTime, StringFormat='Delivery: {0:HH:mm} - {1:HH:mm}'}" FontSize="Small" />
-                            <Label Text="Order Items:" FontSize="Medium" FontAttributes="Bold" />
+                                <!-- Delivery info and Room details -->
+                                <Grid ColumnSpacing="5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Label Text="{Binding DeliveryStartTime, StringFormat='Delivery: {0:HH:mm} - {1:HH:mm}'}"
+                                           Style="{StaticResource DetailLabelStyle}"
+                                           Grid.Column="0" />
+                                    <Label Text="{Binding RoomNumber}"
+                                           Style="{StaticResource DetailLabelStyle}"
+                                           Grid.Column="1"
+                                           HorizontalTextAlignment="End" />
+                                </Grid>
 
-                            <ListView ItemsSource="{Binding OrderItems}" HasUnevenRows="True">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate>
-                                        <ViewCell>
-                                            <StackLayout Padding="5">
-                                                <Label Text="{Binding Product.Name}" FontSize="Small" />
-                                                <Label Text="{Binding Quantity, StringFormat='Quantity: {0}'}" FontSize="Small" />
-                                                <Label Text="{Binding Product.Price, StringFormat='Price: {0:C}'}" FontSize="Small" />
-                                            </StackLayout>
-                                        </ViewCell>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
+                                <!-- Order Items Header -->
+                                <Label Text="Order Items:"
+                                       Style="{StaticResource HeaderLabelStyle}" />
 
-                            <Button Text="Update Status" Command="{Binding UpdateOrderStatusCommand, Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}}" CommandParameter="{Binding .}" />
-                        </StackLayout>
+                                <!-- CollectionView for order items in a grid layout -->
+                                <CollectionView ItemsSource="{Binding OrderItems}">
+                                    <CollectionView.ItemsLayout>
+                                        <!-- Adjust Span below to control columns per row -->
+                                        <GridItemsLayout Orientation="Vertical"
+                                                         Span="2" />
+                                    </CollectionView.ItemsLayout>
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Frame HasShadow="False"
+                                                   Padding="5"
+                                                   Margin="2"
+                                                   BorderColor="LightGray"
+                                                   CornerRadius="5">
+                                                <StackLayout Spacing="2">
+                                                    <!-- Product details -->
+                                                    <Label Text="{Binding Product.Name}"
+                                                           Style="{StaticResource DetailLabelStyle}"
+                                                           LineBreakMode="TailTruncation" />
+                                                    <Label Text="{Binding Quantity, StringFormat='Qty: {0}'}"
+                                                           Style="{StaticResource DetailLabelStyle}" />
+                                                    <Label Text="{Binding Product.Price, StringFormat='Price: {0:C}'}"
+                                                           Style="{StaticResource DetailLabelStyle}" />
+                                                </StackLayout>
+                                            </Frame>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+
+                                <!-- Button to update order status -->
+                                <Button Text="Update Status"
+                                        FontSize="12"
+                                        Padding="5"
+                                        Command="{Binding UpdateOrderStatusCommand, Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}}"
+                                        CommandParameter="{Binding .}"
+                                        HorizontalOptions="End" />
+                            </StackLayout>
+                        </Frame>
                     </ViewCell>
                 </DataTemplate>
             </ListView.ItemTemplate>

@@ -91,7 +91,17 @@ namespace KioskApp.ViewModels
                     foreach (var order in orders)
                     {
                         if (order.Status != "Delivered" && order.Status != "Not placed")
+                        {
                             Orders.Add(order);
+
+                            foreach(var Item in order.OrderItems)
+                            {
+                                Console.WriteLine(Item.ToString());
+
+                            }
+                            //Console.WriteLine(order.ToString());
+                        }
+
                     }
                 }
             }

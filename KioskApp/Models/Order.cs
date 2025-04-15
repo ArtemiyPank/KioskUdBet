@@ -1,11 +1,12 @@
 ﻿using KioskApp.Helpers;
+using MvvmHelpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 namespace KioskApp.Models
 {
-    public class Order
+    public class Order : ObservableObject
     {
         public int Id { get; set; }
         public int UserId { get; set; }
@@ -16,7 +17,13 @@ namespace KioskApp.Models
         public string RoomNumber => User.RoomNumber;
         public DateTime DeliveryStartTime { get; set; }
         public DateTime DeliveryEndTime { get; set; }
-        public string Status { get; set; } = "Not placed"; // Изменение статуса по умолчанию
+
+        private string status = "Not placed";
+        public string Status
+        {
+            get => status;
+            set => SetProperty(ref status, value);  // This method automatically raises the PropertyChanged event.
+        }
 
         public Order()
         {
