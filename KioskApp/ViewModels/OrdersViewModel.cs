@@ -13,25 +13,32 @@ namespace KioskApp.ViewModels
     {
         private readonly IOrderApiService _orderApiService;
         public ObservableCollection<Order> Orders { get; private set; }
+
+        // Command for initial loading of orders.
         public Command LoadOrdersCommand { get; }
+        // Command used for updating the order status.
         public ICommand UpdateOrderStatusCommand { get; }
+        // New command for reloading (refreshing) orders manually.
+        public Command ReloadOrdersCommand { get; }
 
         public OrdersViewModel(IOrderApiService orderApiService)
         {
             _orderApiService = orderApiService;
             Orders = new ObservableCollection<Order>();
-            LoadOrdersCommand = new Command(async () => await LoadOrdersAsync());
-            LoadOrdersCommand.Execute(null);
 
-            // Создаём команду, которая принимает параметр типа Order.
+            // Initialize commands
+            LoadOrdersCommand = new Command(async () => await LoadOrdersAsync());
+            ReloadOrdersCommand = new Command(async () => await LoadOrdersAsync());
             UpdateOrderStatusCommand = new Command<Order>(async (order) => await ExecuteUpdateOrderStatusCommand(order));
+
+            // Load orders when the ViewModel is created.
+            LoadOrdersCommand.Execute(null);
         }
 
-        // Метод для получения следующего статуса в цепочке: Placed -> Assembling -> Delivered
+        // Helper method that returns the next order status.
+        // Cycle: "Placed" -> "Assembling" -> "Delivered"
         private string GetNextStatus(string currentStatus)
         {
-            Console.WriteLine($"currentStatus - {currentStatus}");
-
             switch (currentStatus)
             {
                 case "Placed":
@@ -43,41 +50,37 @@ namespace KioskApp.ViewModels
             }
         }
 
-        // Метод выполнения команды обновления статуса заказа
+        // Executes when the UpdateOrderStatusCommand is triggered.
+        // It updates the order status and, if the status becomes "Delivered",
+        // removes the order from the collection.
         private async Task ExecuteUpdateOrderStatusCommand(Order order)
         {
-
-            Console.WriteLine("----in ExecuteUpdateOrderStatusCommand ----------");
             if (order == null)
-            {
-                Console.WriteLine("-----------ORDER IS NULL-----------");
                 return;
-            }
-            // Определяем следующий статус на основе текущего
+
             string nextStatus = GetNextStatus(order.Status);
             if (string.IsNullOrEmpty(nextStatus))
-            {
-                Console.WriteLine("-----------STATUS IS NULL-----------");
                 return;
-            }
 
-            // Вызываем API для обновления статуса и меняем статус заказа
+            // Call the async method to update the order status via the API.
             await UpdateOrderStatusAsync(order, nextStatus);
 
-            // Если заказ получил статус Delivered, удаляем его из списка заказов
+            // If the order reaches the final status "Delivered", remove it from the list.
             if (nextStatus == "Delivered")
             {
                 Orders.Remove(order);
             }
         }
 
+        // Loads orders from the API and filters them.
+        // Only adds orders that are not "Delivered" or "Not placed".
         public async Task LoadOrdersAsync()
         {
             try
             {
                 IsBusy = true;
 
-                // Устанавливаем глобальный флаг для предотвращения операций со складом
+                // Set the global flag to avoid stock operations during deserialization.
                 DeserializationHelper.IsDeserializing = true;
 
                 var orders = await _orderApiService.GetOrders();
@@ -87,7 +90,7 @@ namespace KioskApp.ViewModels
                 {
                     foreach (var order in orders)
                     {
-                        if(order.Status != "Delivered" && order.Status != "Not placed")
+                        if (order.Status != "Delivered" && order.Status != "Not placed")
                             Orders.Add(order);
                     }
                 }
@@ -95,21 +98,20 @@ namespace KioskApp.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error loading orders: {ex.Message}");
-                // Обработать ошибку по необходимости
+                // Optionally handle or display the error.
             }
             finally
             {
-                // Сбрасываем глобальный флаг
+                // Reset the global flag and busy state.
                 DeserializationHelper.IsDeserializing = false;
                 IsBusy = false;
             }
         }
 
-        // Метод обновления статуса заказа через API
+        // Calls the API to update the order status and then updates
+        // the local order object's Status property.
         public async Task UpdateOrderStatusAsync(Order order, string newStatus)
         {
-            Console.WriteLine("------------------------IN UpdateOrderStatusAsync------------------------");
-
             await _orderApiService.UpdateOrderStatus(order.Id, newStatus);
             order.Status = newStatus;
         }

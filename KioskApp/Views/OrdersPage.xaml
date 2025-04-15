@@ -6,11 +6,19 @@
              Title="Orders">
 
     <StackLayout>
+        <Button Text="Reload Orders" Command="{Binding ReloadOrdersCommand}" />
         <ListView ItemsSource="{Binding Orders}" HasUnevenRows="True">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <ViewCell>
                         <StackLayout Padding="10">
+                            <!-- Display the status on each order card -->
+                            <HorizontalStackLayout>
+                                <Label Text="Status:"
+                                       FontAttributes="Bold" />
+                                <Label Text="{Binding Status}" />
+                            </HorizontalStackLayout>
+
                             <Label Text="Order Details" FontSize="Medium" FontAttributes="Bold" />
                             <Label Text="{Binding User.FirstName}" FontSize="Small" />
                             <Label Text="{Binding User.LastName}" FontSize="Small" />
