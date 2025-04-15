@@ -33,7 +33,7 @@
                                 </ListView.ItemTemplate>
                             </ListView>
 
-                            <Button Text="Update Status" Command="{Binding BindingContext.UpdateOrderStatusCommand, Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}}" CommandParameter="{Binding .}" />
+                            <Button Text="Update Status" Command="{Binding UpdateOrderStatusCommand, Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}}" CommandParameter="{Binding .}" />
                         </StackLayout>
                     </ViewCell>
                 </DataTemplate>

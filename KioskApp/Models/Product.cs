@@ -60,7 +60,19 @@ public class Product : INotifyPropertyChanged
     // Метод для резервирования товара
     public void ReserveStock(int quantity)
     {
-        if (DeserializationHelper.IsDeserializing) return;
+        // Skip if we're deserializing or quantity is invalid
+        if (DeserializationHelper.IsDeserializing)
+        {
+            Debug.WriteLine($"Skipping stock reservation during deserialization for quantity {quantity}");
+            return;
+        }
+
+        if (quantity <= 0)
+        {
+            Debug.WriteLine($"Skipping stock reservation for invalid quantity: {quantity}");
+            return;
+        }
+
         Debug.WriteLine($"Attempting to reserve {quantity} units. Available stock: {AvailableStock}, Reserved stock: {ReservedStock}, Total stock: {Stock}");
 
         if (AvailableStock >= quantity)

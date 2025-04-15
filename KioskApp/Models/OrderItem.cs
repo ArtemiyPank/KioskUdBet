@@ -12,20 +12,28 @@ namespace KioskApp.Models
         //{
         //    _appState = appState;
         //}
+        public OrderItem()
+        {
+            // Default to false to prevent automatic stock reservation during deserialization
+            ShouldManageStock = false;
+        }
 
+        private bool _isInitializing = false;
 
         public int Id { get; set; }
         public int ProductId { get; set; }
 
+        public bool ShouldManageStock { get; set; } = true;
+
         //public Product Product { get; set; }
 
         private Product _product;
-
         public Product Product
         {
             get => _product;
             set
             {
+                // Don't trigger stock operations during property setting
                 _product = value;
                 ProductId = value?.Id ?? 0;
                 OnPropertyChanged(nameof(Product));
@@ -45,15 +53,31 @@ namespace KioskApp.Models
             {
                 if (_quantity != value)
                 {
-                    if (_quantity > value)
+                    // Skip stock operations if we're initializing or deserializing
+                    if (!_isInitializing && !DeserializationHelper.IsDeserializing && ShouldManageStock && Product != null)
                     {
-                        Debug.WriteLine($"Releasing stock for Product ID: {ProductId}, Amount: {_quantity - value}");
-                        Product.ReleaseStock(_quantity - value); // Освобождаем зарезервированный товар
+                        try
+                        {
+                            if (_quantity > value)
+                            {
+                                Debug.WriteLine($"Releasing stock for Product ID: {ProductId}, Amount: {_quantity - value}");
+                                Product.ReleaseStock(_quantity - value);
+                            }
+                            else if (value > _quantity)
+                            {
+                                Debug.WriteLine($"Reserving stock for Product ID: {ProductId}, Amount: {value - _quantity}");
+                                Product.ReserveStock(value - _quantity);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Stock operation failed: {ex.Message}");
+                            throw;
+                        }
                     }
                     else
                     {
-                        Debug.WriteLine($"Reserving stock for Product ID: {ProductId}, Amount: {value - _quantity}");
-                        Product.ReserveStock(value - _quantity); // Резервируем дополнительное количество товара
+                        Debug.WriteLine($"Skipping stock management for Product ID: {ProductId} (initializing or display only)");
                     }
 
                     _quantity = value;
@@ -107,6 +131,21 @@ namespace KioskApp.Models
         }
 
 
+        public void InitializeFromJson(int productId, int quantity)
+        {
+            _isInitializing = true;
+            try
+            {
+                ProductId = productId;
+                _quantity = quantity; // Set directly to avoid triggering stock operations
+                OnPropertyChanged(nameof(Quantity));
+                OnPropertyChanged(nameof(TotalPrice));
+            }
+            finally
+            {
+                _isInitializing = false;
+            }
+        }
 
 
 

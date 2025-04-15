@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using KioskApp.Helpers;
+using KioskApp.Models;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
-using KioskApp.Models;
-using KioskApp.Helpers;
-using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace KioskApp.Services
 {
@@ -40,15 +41,49 @@ namespace KioskApp.Services
 
         public async Task<List<Order>> GetOrders()
         {
-            var response = await _userApiService.SendRequestAsync(() =>
+            try
             {
-                return new HttpRequestMessage(HttpMethod.Get, "api/order");
-            });
+                // Set global flag to prevent stock operations during deserialization
+                DeserializationHelper.IsDeserializing = true;
 
-            Debug.WriteLine(response.ToString());
+                var response = await _userApiService.SendRequestAsync(() =>
+                {
+                    return new HttpRequestMessage(HttpMethod.Get, "api/order");
+                });
 
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<List<Order>>();
+                response.EnsureSuccessStatusCode();
+
+                // Use standard deserialization
+                var orders = await response.Content.ReadFromJsonAsync<List<Order>>();
+
+                // Process orders after deserialization
+                if (orders != null)
+                {
+                    foreach (var order in orders)
+                    {
+                        if (order.OrderItems != null)
+                        {
+                            foreach (var item in order.OrderItems)
+                            {
+                                // Disable stock management for display
+                                item.ShouldManageStock = false;
+                            }
+                        }
+                    }
+                }
+
+                return orders;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting all orders: {ex.Message}");
+                throw;
+            }
+            finally
+            {
+                // Reset global flag
+                DeserializationHelper.IsDeserializing = false;
+            }
         }
 
 
@@ -175,6 +210,70 @@ namespace KioskApp.Services
 
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<Order>();
+        }
+    }
+
+    // Add this class to the file
+    public class SafeOrderItemConverter : JsonConverter<OrderItem>
+    {
+        public override OrderItem Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            // Set a flag to indicate we're deserializing
+            DeserializationHelper.IsDeserializing = true;
+
+            try
+            {
+                // Create a new OrderItem with ShouldManageStock set to false
+                var orderItem = new OrderItem { ShouldManageStock = false };
+
+                // Read the JSON object
+                if (reader.TokenType != JsonTokenType.StartObject)
+                {
+                    throw new JsonException("Expected start of object");
+                }
+
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                {
+                    if (reader.TokenType != JsonTokenType.PropertyName)
+                    {
+                        throw new JsonException("Expected property name");
+                    }
+
+                    var propertyName = reader.GetString();
+                    reader.Read();
+
+                    switch (propertyName)
+                    {
+                        case "id":
+                        case "Id":
+                            orderItem.Id = reader.GetInt32();
+                            break;
+                        case "productId":
+                        case "ProductId":
+                            orderItem.ProductId = reader.GetInt32();
+                            break;
+                        case "quantity":
+                        case "Quantity":
+                            // Set quantity directly to avoid triggering stock operations
+                            orderItem.Quantity = reader.GetInt32();
+                            break;
+                            // Add other properties as needed
+                    }
+                }
+
+                return orderItem;
+            }
+            finally
+            {
+                // Reset the flag
+                DeserializationHelper.IsDeserializing = false;
+            }
+        }
+
+        public override void Write(Utf8JsonWriter writer, OrderItem value, JsonSerializerOptions options)
+        {
+            // Default serialization
+            JsonSerializer.Serialize(writer, value, options);
         }
     }
 }

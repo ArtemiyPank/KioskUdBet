@@ -1,0 +1,47 @@
+[33m1f9b614[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m HEAD@{0}: checkout: moving from master to master
+[33m1f9b614[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m HEAD@{1}: checkout: moving from e89b7e1c366e8c90278288c479374cbe38b7768f to master
+[33me89b7e1[m HEAD@{2}: commit: A change in the quantity of goods on the server was added after the order was delivered. Bugs related to the change in the quantity of reserved goods were fixed
+[33me211caa[m HEAD@{3}: commit (amend): Poshlo v pizdu pol sistemy kontrolya kolichestva tovarov
+[33mbd54342[m HEAD@{4}: commit: Poshlo v pizdu pol sistemy kontrolya kolichestva tovarov
+[33me3e2c40[m HEAD@{5}: commit (amend): The products quantity update system has been realise using sse
+[33mcdd18bf[m HEAD@{6}: commit: The products quantity update system has been realise using sse
+[33m4dab948[m HEAD@{7}: commit (amend): The order status update system has been updated with sse
+[33m8a938cf[m HEAD@{8}: commit (amend): The order status update system has been updated with sse
+[33medf72fa[m HEAD@{9}: commit (amend): The order status update system has been updated with sse
+[33m2f79087[m HEAD@{10}: commit: The order status update system has been updated with sse
+[33m3e57f51[m HEAD@{11}: commit: The order status functionality has been added for the regular user. The visual interface of the shopping cart tab has been updated.
+[33m0722728[m HEAD@{12}: commit: Fixed a bug with not displaying a new image when changing an item if it was cached
+[33mf036bd0[m HEAD@{13}: commit: The bug with duplicate items when logging out or logging in to the account has been fixed
+[33mc5d6472[m HEAD@{14}: commit: The display of orders in the admin account has been added
+[33m2f07039[m HEAD@{15}: commit (amend): The main page and MessagingCenter have been changed
+[33m234c34c[m HEAD@{16}: commit: The main page and MessagingCenter have been changed
+[33m7faa83c[m HEAD@{17}: commit: The refresh tokens table and its relationships have been updated
+[33m6b85878[m HEAD@{18}: commit (amend): The ability to add items to the cart has been added
+[33mab04158[m HEAD@{19}: commit (amend): The ability to add items to the cart has been added
+[33m5bf93d2[m HEAD@{20}: commit (amend): The ability to add items to the cart has been added
+[33me3f5240[m HEAD@{21}: commit (amend): The ability to add items to the cart has been added
+[33m20bf151[m HEAD@{22}: commit (amend): The ability to add items to the cart has been added
+[33mb7e47f3[m HEAD@{23}: commit: The ability to add items to the cart has been added
+[33m32cf37b[m HEAD@{24}: commit: The function of hiding the product has been improved
+[33m4ccb7e2[m HEAD@{25}: commit (amend): Changes have been made, thanks to which only admins can create, modify, delete and hide products
+[33m61e8480[m HEAD@{26}: commit (amend): Changes have been made, thanks to which only admins can create, modify, delete and hide products
+[33mdb95ce9[m HEAD@{27}: commit: Changes have been made in frontend, thanks to which only admins can create, modify, delete and hide products
+[33m3894e0b[m HEAD@{28}: commit (amend): The function of editing product information has been added
+[33m5385808[m HEAD@{29}: commit (amend): The function of editing product information has been added
+[33mec80f58[m HEAD@{30}: commit (amend): The function of editing product information has been added
+[33mbec5e54[m HEAD@{31}: commit (amend): The function of editing product information has been added
+[33m60d13af[m HEAD@{32}: commit: The function of editing product information has been added
+[33m3ce79d2[m HEAD@{33}: commit: The function of adding a product has been moved to separate tab
+[33m555fd46[m HEAD@{34}: commit (amend): The display of images has been fixed. Product caching has been added.
+[33m66ac05c[m HEAD@{35}: commit (amend): The display of images has been fixed. Product caching has been added.
+[33meef724e[m HEAD@{36}: commit (amend): The display of images has been fixed. Product caching has been added.
+[33mfb5d142[m HEAD@{37}: commit: The display of images has been fixed. Product caching has been added.
+[33m1f9b614[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m HEAD@{38}: checkout: moving from master to 1f9b614ca3fe1daa2f68c7e5ccbba81b2f2e388d
+[33m1f9b614[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m HEAD@{39}: commit: Initial product addition system has been added(alpha)
+[33m4dd2c7e[m HEAD@{40}: commit: Error display has been added to the user. The token transfer has been moved to the header of the request.
+[33m335d644[m HEAD@{41}: commit (amend): Added authentication system using access and refresh tokens
+[33m66024ec[m HEAD@{42}: commit: Added authentication system using access and refresh tokens
+[33mca1d71e[m HEAD@{43}: commit: Password hashing with salt has been added
+[33mb516919[m HEAD@{44}: commit: The user authentication system has been updated
+[33m10a3fb9[m HEAD@{45}: commit: Add project files.
+[33m2f9458e[m HEAD@{46}: commit (initial): Add .gitattributes and .gitignore.

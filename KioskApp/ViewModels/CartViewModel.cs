@@ -42,8 +42,6 @@ namespace KioskApp.ViewModels
             get => _orderStatusValue;
             set
             {
-                //Debug.WriteLine("OrderStatusValue was changed");
-
                 _orderStatusValue = value;
                 OrderStatusProgress = (value == 3) ? 100 : 40;
 

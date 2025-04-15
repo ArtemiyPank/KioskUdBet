@@ -8,6 +8,7 @@ namespace KioskApp.Helpers
 {
     public static class DeserializationHelper
     {
+        // Static property to track deserialization state
         public static bool IsDeserializing { get; set; } = false;
     }
 
