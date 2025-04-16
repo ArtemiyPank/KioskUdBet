@@ -14,13 +14,15 @@ namespace KioskApp.Models
         public string RoomNumber { get; set; }
         public string Role { get; set; } = "User"; // "User" / "Admin"
 
+        public string? PlaceOfBirth { get; set; }
+
         [JsonIgnore]
         public string FullName => $"{FirstName} {LastName}";
 
         public override string ToString()
         {
             return $"Id: {Id} \nEmail: {Email} \nFirstName: {FirstName} \nLastName: {LastName} " +
-                $"\nBuilding: {Building}\n RoomNumber: {RoomNumber} \nLanguage: {Language} \nRole: {Role}";
+                $"\nBuilding: {Building}\n RoomNumber: {RoomNumber} \nLanguage: {Language} \nRole: {Role} \nPlaceOfBirth: {PlaceOfBirth}";
         }
     }
 }

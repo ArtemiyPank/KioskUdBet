@@ -1,10 +1,11 @@
-﻿using System.ComponentModel;
+﻿using KioskApp.Models;
+using KioskApp.Services;
+using MvvmHelpers;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using KioskApp.Models;
-using KioskApp.Services;
-using MvvmHelpers;
+using System.Windows.Input;
 
 namespace KioskApp.ViewModels
 {
@@ -13,10 +14,14 @@ namespace KioskApp.ViewModels
         private readonly IUserApiService _apiService;
         private readonly IUserService _userService;
 
+        public ICommand SetPlaceOfBirthCommand { get; }
+
         public RegisterViewModel()
         {
             _apiService = DependencyService.Get<IUserApiService>();
             _userService = DependencyService.Get<IUserService>();
+            SetPlaceOfBirthCommand = new Command(async () => await SetPlaceOfBirthByGeolocationAsync());
+
         }
 
         private string _email;
@@ -96,6 +101,28 @@ namespace KioskApp.ViewModels
             }
         }
 
+        //private string _placeOfBirth;
+        //public string PlaceOfBirth
+        //{
+        //    get => _placeOfBirth;
+        //    set
+        //    {
+        //        _placeOfBirth = value;
+        //        OnPropertyChanged();
+        //    }
+        //}
+
+        private string _placeOfBirth;
+        public string PlaceOfBirth
+        {
+            get => _placeOfBirth;
+            set
+            {
+                SetProperty(ref _placeOfBirth, value);
+                OnPropertyChanged();
+            }
+        }
+
         private string _errorMessage;
         public string ErrorMessage
         {
@@ -118,6 +145,7 @@ namespace KioskApp.ViewModels
                 Building = Building,
                 RoomNumber = RoomNumber,
                 Language = Language,
+                PlaceOfBirth = PlaceOfBirth
             };
 
             if (string.IsNullOrEmpty(user.Email) || string.IsNullOrEmpty(user.Password) || string.IsNullOrEmpty(user.FirstName) || string.IsNullOrEmpty(user.LastName) || string.IsNullOrEmpty(user.Building) || string.IsNullOrEmpty(user.RoomNumber) || string.IsNullOrEmpty(user.Language))
@@ -146,6 +174,41 @@ namespace KioskApp.ViewModels
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+
+        public async Task SetPlaceOfBirthByGeolocationAsync()
+        {
+            try
+            {
+                // Получаем последнее известное местоположение
+                var location = await Geolocation.GetLastKnownLocationAsync();
+                if (location == null)
+                {
+                    // Если последнее известное местоположение недоступно, запрашиваем новое
+                    location = await Geolocation.GetLocationAsync(new GeolocationRequest(GeolocationAccuracy.Medium));
+                }
+                if (location != null)
+                {
+                    // Выполняем обратное геокодирование для получения адреса
+                    var placemarks = await Geocoding.GetPlacemarksAsync(location);
+                    var placemark = placemarks?.FirstOrDefault();
+                    if (placemark != null)
+                    {
+                        // Формируем читаемое представление адреса
+                        string placeOfBirth = $"{placemark.Locality}, {placemark.AdminArea}, {placemark.CountryName}";
+                        // Например, обновляем соответствующее свойство в модели
+                        // Предполагаем, что у вас есть привязка к CurrentUser в ProfileViewModel
+                        PlaceOfBirth = placeOfBirth;
+                        OnPropertyChanged(nameof(PlaceOfBirth));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Обработка ошибок (например, отсутствие разрешений)
+                await Application.Current.MainPage.DisplayAlert("Ошибка", $"Невозможно получить данные геолокации: {ex.Message}", "OK");
+            }
         }
     }
 }

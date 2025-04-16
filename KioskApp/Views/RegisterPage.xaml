@@ -29,6 +29,10 @@
                 </x:Array>
             </Picker.ItemsSource>
         </Picker>
+        <Entry Placeholder="Place Of Birthday" Text="{Binding PlaceOfBirth, Mode=TwoWay}" />
+        <Button Text="Get location" Command="{Binding SetPlaceOfBirthCommand}" />
+
+
         <Button Text="Register" Clicked="OnRegisterClicked" />
 
         <!-- Error Message Label -->

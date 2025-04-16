@@ -31,6 +31,7 @@ namespace KioskAPI.Models
             RoomNumber = user.RoomNumber;
             Status = "Not placed";
             OrderItems = orderItems;
+            CreationTime = DateTime.Now;
         }
 
         // Метод для создания нового пустого заказа со статусом "Not placed"
@@ -43,7 +44,8 @@ namespace KioskAPI.Models
                 Building = user.Building,
                 RoomNumber = user.RoomNumber,
                 Status = "Not placed",
-                OrderItems = new List<OrderItem>() // Пустой список товаров
+                OrderItems = new List<OrderItem>(),
+                CreationTime = DateTime.Now
             };
 
             Console.WriteLine(newOrder.ToString());

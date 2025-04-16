@@ -23,6 +23,7 @@ namespace KioskAPI.Models
         [JsonIgnore]
         public RefreshToken? RefreshToken { get; set; }
 
+        public string? PlaceOfBirth { get; set; }
         public override string ToString()
         {
             return $"Id: {Id} \nEmail: {Email} \nFirstName: {FirstName} \nLastName: {LastName} " +

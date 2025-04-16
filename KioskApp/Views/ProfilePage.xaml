@@ -13,6 +13,8 @@
             <Label Text="{Binding CurrentUser.Building, StringFormat='Building: {0}'}" />
             <Label Text="{Binding CurrentUser.RoomNumber, StringFormat='Room number: {0}'}" />
             <Label Text="{Binding CurrentUser.Language, StringFormat='Language: {0}'}" />
+            <Label Text="{Binding CurrentUser.PlaceOfBirth, StringFormat='Place of birthday: {0}'}" />
+
             <Button Text="Logout" Command="{Binding LogoutCommand}" />
         </StackLayout>
 

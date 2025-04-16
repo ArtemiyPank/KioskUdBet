@@ -101,6 +101,7 @@ namespace KioskAPI.Services
             existingOrder.DeliveryStartTime = order.DeliveryStartTime;
             existingOrder.DeliveryEndTime = order.DeliveryEndTime;
             existingOrder.Status = order.Status;
+            existingOrder.CreationTime = DateTime.Now;
 
             // Добавляем новые элементы заказа
             foreach (var newItem in order.OrderItems)

@@ -32,6 +32,8 @@ namespace KioskAPI.Controllers
         public string Building { get; set; }
         public string RoomNumber { get; set; }
         public string Role { get; set; }
+        public string? PlaceOfBirth { get; set; }
+
     }
 
     public class RegistrateRequest
@@ -44,6 +46,7 @@ namespace KioskAPI.Controllers
         public string Language { get; set; }
         public string Building { get; set; }
         public string RoomNumber { get; set; }
+        public string? PlaceOfBirth { get; set; }
         public string Role { get; set; } = "User";
     }
 
@@ -96,6 +99,7 @@ namespace KioskAPI.Controllers
                 Language = request.Language,
                 Building = request.Building,
                 RoomNumber = request.RoomNumber,
+                PlaceOfBirth = request.PlaceOfBirth,
             };
 
             // Hash the password with the salt
@@ -116,7 +120,10 @@ namespace KioskAPI.Controllers
                 Language = newUser.Language,
                 Building = newUser.Building,
                 RoomNumber = newUser.RoomNumber,
-                Role = newUser.Role
+                Role = newUser.Role,
+                PlaceOfBirth = newUser.PlaceOfBirth,
+
+
             };
 
             Response.Headers.Add("Access-Token", token);
@@ -162,7 +169,8 @@ namespace KioskAPI.Controllers
                 Language = user.Language,
                 Building = user.Building,
                 RoomNumber = user.RoomNumber,
-                Role = user.Role
+                Role = user.Role,
+                PlaceOfBirth = user.PlaceOfBirth,
             };
 
             Response.Headers.Append("Access-Token", token);
@@ -219,7 +227,8 @@ namespace KioskAPI.Controllers
                     Language = user.Language,
                     Building = user.Building,
                     RoomNumber = user.RoomNumber,
-                    Role = user.Role
+                    Role = user.Role,
+                    PlaceOfBirth = user.PlaceOfBirth,
                 };
 
                 Response.Headers.Append("Access-Token", newJwtToken);

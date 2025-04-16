@@ -14,17 +14,25 @@ namespace KioskApp.ViewModels
 
         public ProfileViewModel()
         {
-            _userService = DependencyService.Get<IUserService>();
-            NavigateToLoginCommand = new Command(OnNavigateToLogin);
-            NavigateToRegisterCommand = new Command(OnNavigateToRegister);
-            LogoutCommand = new Command(OnLogout);
-
-            UpdateUserState();
-
-            MessagingCenter.Subscribe<App>(this, "UserStateChanged", (sender) =>
+            try
             {
+                _userService = DependencyService.Get<IUserService>();
+                NavigateToLoginCommand = new Command(OnNavigateToLogin);
+                NavigateToRegisterCommand = new Command(OnNavigateToRegister);
+                LogoutCommand = new Command(OnLogout);
+
                 UpdateUserState();
-            });
+
+                MessagingCenter.Subscribe<App>(this, "UserStateChanged", (sender) =>
+                {
+                    UpdateUserState();
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка в конструкторе ProfileViewModel: {ex} - Inner: {ex.InnerException?.Message}");
+                throw;
+            }
         }
 
         public User CurrentUser => _userService.GetCurrentUser();
