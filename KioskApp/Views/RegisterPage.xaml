@@ -1,41 +1,125 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="KioskApp.Views.RegisterPage">
+             x:Class="KioskApp.Views.RegisterPage"
+             BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
+    <!-- Оборачиваем содержимое в ScrollView для адаптивного отображения -->
+    <ScrollView>
+        <StackLayout Padding="20"
+                     Spacing="20">
+            <!-- Заголовок страницы -->
+            <Label Text="Register"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   HorizontalOptions="Center"
+                   Margin="0,10,0,20" />
 
-    <StackLayout Padding="10">
-        <Entry Text="{Binding Email}" x:Name="emailEntry" Placeholder="Email" Keyboard="Email" />
-        <Entry Text="{Binding Password}" x:Name="passwordEntry" Placeholder="Password" IsPassword="True" />
-        <CheckBox x:Name="showPasswordCheckBox" CheckedChanged="OnShowPasswordCheckedChanged" />
-        <Entry Text="{Binding FirstName}" x:Name="firstNameEntry" Placeholder="First Name" />
-        <Entry Text="{Binding LastName}" x:Name="lastNameEntry" Placeholder="Last Name" />
-        <Picker SelectedItem="{Binding Building}" x:Name="buildingPicker" Title="Select Building">
-            <Picker.ItemsSource>
-                <x:Array Type="{x:Type x:String}">
-                    <x:String>thelet</x:String>
-                    <x:String>paz</x:String>
-                    <x:String>degel</x:String>
-                    <x:String>lavan</x:String>
-                </x:Array>
-            </Picker.ItemsSource>
-        </Picker>
-        <Entry Text="{Binding RoomNumber}" x:Name="roomNumberEntry" Placeholder="Room Number" />
-        <Picker SelectedItem="{Binding Language}" x:Name="languagePicker" Title="Select Language">
-            <Picker.ItemsSource>
-                <x:Array Type="{x:Type x:String}">
-                    <x:String>English</x:String>
-                    <x:String>Russian</x:String>
-                    <x:String>Hebrew</x:String>
-                </x:Array>
-            </Picker.ItemsSource>
-        </Picker>
-        <Entry Placeholder="Place Of Birthday" Text="{Binding PlaceOfBirth, Mode=TwoWay}" />
-        <Button Text="Get location" Command="{Binding SetPlaceOfBirthCommand}" />
+            <!-- Поле ввода Email -->
+            <Entry Text="{Binding Email}"
+                   x:Name="emailEntry"
+                   Placeholder="Email"
+                   Keyboard="Email"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
 
+            <!-- Поле ввода Password -->
+            <Entry Text="{Binding Password}"
+                   x:Name="passwordEntry"
+                   Placeholder="Password"
+                   IsPassword="True"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
 
-        <Button Text="Register" Clicked="OnRegisterClicked" />
+            <!-- CheckBox для показа/скрытия пароля -->
+            <CheckBox x:Name="showPasswordCheckBox"
+                      CheckedChanged="OnShowPasswordCheckedChanged" />
 
-        <!-- Error Message Label -->
-        <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBooleanConverter}}" />
-    </StackLayout>
+            <!-- Поле ввода First Name -->
+            <Entry Text="{Binding FirstName}"
+                   x:Name="firstNameEntry"
+                   Placeholder="First Name"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
+
+            <!-- Поле ввода Last Name -->
+            <Entry Text="{Binding LastName}"
+                   x:Name="lastNameEntry"
+                   Placeholder="Last Name"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
+
+            <!-- Picker для выбора Building -->
+            <Picker SelectedItem="{Binding Building}"
+                    x:Name="buildingPicker"
+                    Title="Select Building"
+                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                    TextColor="{DynamicResource PrimaryTextColor}"
+                    FontSize="16">
+                <Picker.ItemsSource>
+                    <x:Array Type="{x:Type x:String}">
+                        <x:String>thelet</x:String>
+                        <x:String>paz</x:String>
+                        <x:String>degel</x:String>
+                        <x:String>lavan</x:String>
+                    </x:Array>
+                </Picker.ItemsSource>
+            </Picker>
+
+            <!-- Поле ввода Room Number -->
+            <Entry Text="{Binding RoomNumber}"
+                   x:Name="roomNumberEntry"
+                   Placeholder="Room Number"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
+
+            <!-- Picker для выбора Language -->
+            <Picker SelectedItem="{Binding Language}"
+                    x:Name="languagePicker"
+                    Title="Select Language"
+                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                    TextColor="{DynamicResource PrimaryTextColor}"
+                    FontSize="16">
+                <Picker.ItemsSource>
+                    <x:Array Type="{x:Type x:String}">
+                        <x:String>English</x:String>
+                        <x:String>Russian</x:String>
+                        <x:String>Hebrew</x:String>
+                    </x:Array>
+                </Picker.ItemsSource>
+            </Picker>
+
+            <!-- Поле ввода Place Of Birthday -->
+            <Entry Placeholder="Place Of Birthday"
+                   Text="{Binding PlaceOfBirth, Mode=TwoWay}"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
+
+            <!-- Кнопка для получения геолокации -->
+            <Button Text="Get location"
+                    Command="{Binding SetPlaceOfBirthCommand}"
+                    BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                    TextColor="{DynamicResource PrimaryTextColor}"
+                    FontSize="16" />
+
+            <!-- Кнопка регистрации -->
+            <Button Text="Register"
+                    Clicked="OnRegisterClicked"
+                    BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                    TextColor="{DynamicResource PrimaryTextColor}"
+                    FontSize="16" />
+
+            <!-- Метка для вывода сообщения об ошибке -->
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="{DynamicResource AccentColor}"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBooleanConverter}}"
+                   FontSize="14" />
+        </StackLayout>
+    </ScrollView>
 </ContentPage>

@@ -4,53 +4,122 @@
              xmlns:vm="clr-namespace:KioskApp.ViewModels"
              x:Class="KioskApp.Views.ProductsPage"
              Title="Products"
-             x:Name="productsPage">
-
+             x:Name="productsPage"
+             BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
+    <!-- Обёртка в ScrollView для адаптивности -->
     <ScrollView>
-        <StackLayout Padding="10" HorizontalOptions="Center">
-            <Button Text="Add Product" Command="{Binding NavigateToAddProductCommand}">
+        <StackLayout Padding="20"
+                     Spacing="20"
+                     HorizontalOptions="Center">
+
+            <!-- Кнопка добавления продукта (видима только для админа) -->
+            <Button Text="Add Product"
+                    Command="{Binding NavigateToAddProductCommand}"
+                    BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                    TextColor="{DynamicResource PrimaryTextColor}"
+                    FontSize="16">
                 <Button.Triggers>
-                    <DataTrigger TargetType="Button" Binding="{Binding IsAdmin}" Value="False">
-                        <Setter Property="IsVisible" Value="False" />
+                    <DataTrigger TargetType="Button"
+                                 Binding="{Binding IsAdmin}"
+                                 Value="False">
+                        <Setter Property="IsVisible"
+                                Value="False" />
                     </DataTrigger>
                 </Button.Triggers>
             </Button>
 
-            <CollectionView ItemsSource="{Binding Products}">
+            <!-- Список продуктов -->
+            <CollectionView ItemsSource="{Binding Products}"
+                            BackgroundColor="{DynamicResource SecondaryBackgroundColor}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
-                        <Frame BorderColor="LightGray" Padding="10" Margin="5">
-                            <StackLayout>
-                                <Image Source="{Binding ImageUrl}" HeightRequest="100" />
-                                <Label Text="{Binding Name, StringFormat='Name: {0}'}" FontAttributes="Bold" />
-                                <Label Text="{Binding Description, StringFormat='Description: {0}'}" />
-                                <Label Text="{Binding Price, StringFormat='Price: {0:C}'}" />
-                                <Label Text="{Binding AvailableStock, StringFormat='Stock: {0}'}" />
-                                <Button Text="Add to Cart" 
+                        <Frame BorderColor="{DynamicResource AccentColor}"
+                               Padding="15"
+                               Margin="10"
+                               BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                               HasShadow="False"
+                               CornerRadius="8">
+                            <StackLayout Spacing="10">
+
+                                <!-- Изображение продукта -->
+                                <Image Source="{Binding ImageUrl}"
+                                       HeightRequest="100"
+                                       Aspect="AspectFill" />
+
+                                <!-- Имя продукта -->
+                                <Label Text="{Binding Name, StringFormat='Name: {0}'}"
+                                       FontAttributes="Bold"
+                                       TextColor="{DynamicResource PrimaryTextColor}"
+                                       FontSize="16" />
+
+                                <!-- Описание продукта -->
+                                <Label Text="{Binding Description, StringFormat='Description: {0}'}"
+                                       TextColor="{DynamicResource PrimaryTextColor}"
+                                       FontSize="14" />
+
+                                <!-- Цена продукта -->
+                                <Label Text="{Binding Price, StringFormat='Price: {0:C}'}"
+                                       TextColor="{DynamicResource PrimaryTextColor}"
+                                       FontSize="14" />
+
+                                <!-- Остаток на складе -->
+                                <Label Text="{Binding AvailableStock, StringFormat='Stock: {0}'}"
+                                       TextColor="{DynamicResource PrimaryTextColor}"
+                                       FontSize="14" />
+
+                                <!-- Кнопка "Add to Cart" -->
+                                <Button Text="Add to Cart"
                                         Command="{Binding Path=BindingContext.AddToCartCommand, Source={x:Reference productsPage}}"
-                                        CommandParameter="{Binding .}" />
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                                        TextColor="{DynamicResource PrimaryTextColor}"
+                                        FontSize="14" />
 
-                                <!-- Only visible to admins -->
-                                <Button Text="Delete" Command="{Binding Path=BindingContext.DeleteProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}">
+                                <!-- Кнопки, видимые только для администраторов -->
+                                <Button Text="Delete"
+                                        Command="{Binding Path=BindingContext.DeleteProductCommand, Source={x:Reference productsPage}}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                                        TextColor="{DynamicResource PrimaryTextColor}"
+                                        FontSize="14">
                                     <Button.Triggers>
-                                        <DataTrigger TargetType="Button" Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}" Value="False">
-                                            <Setter Property="IsVisible" Value="False" />
+                                        <DataTrigger TargetType="Button"
+                                                     Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}"
+                                                     Value="False">
+                                            <Setter Property="IsVisible"
+                                                    Value="False" />
                                         </DataTrigger>
                                     </Button.Triggers>
                                 </Button>
 
-                                <Button Text="Edit" Command="{Binding Path=BindingContext.NavigateToEditProductCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}">
+                                <Button Text="Edit"
+                                        Command="{Binding Path=BindingContext.NavigateToEditProductCommand, Source={x:Reference productsPage}}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                                        TextColor="{DynamicResource PrimaryTextColor}"
+                                        FontSize="14">
                                     <Button.Triggers>
-                                        <DataTrigger TargetType="Button" Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}" Value="False">
-                                            <Setter Property="IsVisible" Value="False" />
+                                        <DataTrigger TargetType="Button"
+                                                     Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}"
+                                                     Value="False">
+                                            <Setter Property="IsVisible"
+                                                    Value="False" />
                                         </DataTrigger>
                                     </Button.Triggers>
                                 </Button>
 
-                                <Button Text="{Binding VisibilityIsHiddenText}" Command="{Binding Path=BindingContext.ToggleVisibilityCommand, Source={x:Reference productsPage}}" CommandParameter="{Binding .}">
+                                <Button Text="{Binding VisibilityIsHiddenText}"
+                                        Command="{Binding Path=BindingContext.ToggleVisibilityCommand, Source={x:Reference productsPage}}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                                        TextColor="{DynamicResource PrimaryTextColor}"
+                                        FontSize="14">
                                     <Button.Triggers>
-                                        <DataTrigger TargetType="Button" Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}" Value="False">
-                                            <Setter Property="IsVisible" Value="False" />
+                                        <DataTrigger TargetType="Button"
+                                                     Binding="{Binding Path=BindingContext.IsAdmin, Source={x:Reference productsPage}}"
+                                                     Value="False">
+                                            <Setter Property="IsVisible"
+                                                    Value="False" />
                                         </DataTrigger>
                                     </Button.Triggers>
                                 </Button>

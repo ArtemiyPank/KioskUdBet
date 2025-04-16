@@ -3,24 +3,80 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:KioskApp.ViewModels"
              x:Class="KioskApp.Views.EditProductPage"
-             Title="Edit Product">
+             Title="Edit Product"
+             BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
 
+    <!-- Устанавливаем BindingContext через ресурс -->
     <ContentPage.BindingContext>
         <vm:EditProductViewModel />
     </ContentPage.BindingContext>
 
-    <StackLayout Padding="10">
-        <Entry Placeholder="Name" Text="{Binding Product.Name}" />
-        <Entry Placeholder="Description" Text="{Binding Product.Description}" />
-        <Entry Placeholder="Category" Text="{Binding Product.Category}" />
-        <Entry Placeholder="Price" Text="{Binding Product.Price}" Keyboard="Numeric" />
-        <Entry Placeholder="Stock" Text="{Binding Product.Stock}" Keyboard="Numeric" />
+    <!-- Добавляем ScrollView для адаптивного отображения на разных экранах -->
+    <ScrollView>
+        <StackLayout Padding="20"
+                     Spacing="20">
+            <!-- Поле ввода Name -->
+            <Entry Placeholder="Name"
+                   Text="{Binding Product.Name}"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
 
-        <Button Text="Choose Image" Command="{Binding ChooseImageCommand}" />
-        <Image Source="{Binding ImagePath}" HeightRequest="200" WidthRequest="200" />
+            <!-- Поле ввода Description -->
+            <Entry Placeholder="Description"
+                   Text="{Binding Product.Description}"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
 
-        <Button Text="Update Product" Command="{Binding UpdateProductCommand}" />
+            <!-- Поле ввода Category -->
+            <Entry Placeholder="Category"
+                   Text="{Binding Product.Category}"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
 
-        <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}" />
-    </StackLayout>
+            <!-- Поле ввода Price -->
+            <Entry Placeholder="Price"
+                   Text="{Binding Product.Price}"
+                   Keyboard="Numeric"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
+
+            <!-- Поле ввода Stock -->
+            <Entry Placeholder="Stock"
+                   Text="{Binding Product.Stock}"
+                   Keyboard="Numeric"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
+
+            <!-- Кнопка для выбора изображения -->
+            <Button Text="Choose Image"
+                    Command="{Binding ChooseImageCommand}"
+                    BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                    TextColor="{DynamicResource PrimaryTextColor}"
+                    FontSize="16" />
+
+            <!-- Отображение изображения -->
+            <Image Source="{Binding ImagePath}"
+                   HeightRequest="200"
+                   WidthRequest="200"
+                   Aspect="AspectFit" />
+
+            <!-- Кнопка для обновления продукта -->
+            <Button Text="Update Product"
+                    Command="{Binding UpdateProductCommand}"
+                    BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                    TextColor="{DynamicResource PrimaryTextColor}"
+                    FontSize="16" />
+
+            <!-- Метка для вывода сообщения об ошибке -->
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="{DynamicResource AccentColor}"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                   FontSize="14" />
+        </StackLayout>
+    </ScrollView>
 </ContentPage>

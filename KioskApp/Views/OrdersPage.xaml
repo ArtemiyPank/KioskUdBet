@@ -3,9 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:KioskApp.ViewModels"
              x:Class="KioskApp.Views.OrdersPage"
-             Title="Orders">
+             Title="Orders"
+             BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
 
-    <!-- Minimal styles for headers and details -->
+    <!-- Обновлённые локальные стили для заголовков и деталей -->
     <ContentPage.Resources>
         <Style x:Key="HeaderLabelStyle"
                TargetType="Label">
@@ -13,37 +14,43 @@
                     Value="14" />
             <Setter Property="FontAttributes"
                     Value="Bold" />
+            <!-- Используем динамический ресурс для текста -->
             <Setter Property="TextColor"
-                    Value="Black" />
+                    Value="{DynamicResource PrimaryTextColor}" />
         </Style>
         <Style x:Key="DetailLabelStyle"
                TargetType="Label">
             <Setter Property="FontSize"
                     Value="12" />
             <Setter Property="TextColor"
-                    Value="Black" />
+                    Value="{DynamicResource PrimaryTextColor}" />
         </Style>
     </ContentPage.Resources>
 
-    <StackLayout Padding="5">
-        <!-- Button to manually reload orders -->
+    <StackLayout Padding="10">
+        <!-- Кнопка для ручной перезагрузки заказов -->
         <Button Text="Reload Orders"
                 Command="{Binding ReloadOrdersCommand}"
-                Margin="0,10,0,0" />
-        
-        <!-- ListView for all orders -->
+                Margin="0,10,0,0"
+                BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                TextColor="{DynamicResource PrimaryTextColor}" />
+
+        <!-- ListView для отображения всех заказов -->
         <ListView ItemsSource="{Binding Orders}"
                   HasUnevenRows="True"
-                  SeparatorVisibility="None">
+                  SeparatorVisibility="None"
+                  BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <ViewCell>
                         <Frame HasShadow="False"
                                Padding="5"
                                Margin="2"
-                               BorderColor="LightGray">
+                               BorderColor="{DynamicResource AccentColor}"
+                               BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                               CornerRadius="8">
                             <StackLayout Spacing="8">
-                                <!-- Order Header with basic details -->
+                                <!-- Заголовок заказа с основными данными -->
                                 <Grid ColumnSpacing="5">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -53,21 +60,23 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <!-- Order information -->
+                                    <!-- Информация о заказе -->
                                     <Label Text="Order Details"
                                            Style="{StaticResource HeaderLabelStyle}"
                                            Grid.Row="0"
                                            Grid.Column="0" />
+                                    
                                     <Label Text="{Binding Status}"
                                            Style="{StaticResource DetailLabelStyle}"
                                            TextColor="DarkBlue"
                                            Grid.Row="0"
                                            Grid.Column="1"
                                            HorizontalTextAlignment="End" />
-                                    <Label Text="{Binding User.FirstName} {Binding User.LastName}"
-                                           Style="{StaticResource DetailLabelStyle}"
+                                    
+                                    <Label Text="{Binding User.FullName}"
                                            Grid.Row="1"
                                            Grid.Column="0" />
+
                                     <Label Text="{Binding Building}"
                                            Style="{StaticResource DetailLabelStyle}"
                                            Grid.Row="1"
@@ -75,7 +84,7 @@
                                            HorizontalTextAlignment="End" />
                                 </Grid>
 
-                                <!-- Delivery info and Room details -->
+                                <!-- Информация о доставке и номере комнаты -->
                                 <Grid ColumnSpacing="5">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -90,14 +99,13 @@
                                            HorizontalTextAlignment="End" />
                                 </Grid>
 
-                                <!-- Order Items Header -->
+                                <!-- Заголовок для списка товаров заказа -->
                                 <Label Text="Order Items:"
                                        Style="{StaticResource HeaderLabelStyle}" />
 
-                                <!-- CollectionView for order items in a grid layout -->
+                                <!-- Коллекция для отображения товаров заказа в виде сетки -->
                                 <CollectionView ItemsSource="{Binding OrderItems}">
                                     <CollectionView.ItemsLayout>
-                                        <!-- Adjust Span below to control columns per row -->
                                         <GridItemsLayout Orientation="Vertical"
                                                          Span="2" />
                                     </CollectionView.ItemsLayout>
@@ -106,15 +114,18 @@
                                             <Frame HasShadow="False"
                                                    Padding="5"
                                                    Margin="2"
-                                                   BorderColor="LightGray"
+                                                   BorderColor="{DynamicResource AccentColor}"
+                                                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                                                    CornerRadius="5">
                                                 <StackLayout Spacing="2">
-                                                    <!-- Product details -->
+                                                    <!-- Название продукта -->
                                                     <Label Text="{Binding Product.Name}"
                                                            Style="{StaticResource DetailLabelStyle}"
                                                            LineBreakMode="TailTruncation" />
+                                                    <!-- Количество товара -->
                                                     <Label Text="{Binding Quantity, StringFormat='Qty: {0}'}"
                                                            Style="{StaticResource DetailLabelStyle}" />
+                                                    <!-- Цена продукта -->
                                                     <Label Text="{Binding Product.Price, StringFormat='Price: {0:C}'}"
                                                            Style="{StaticResource DetailLabelStyle}" />
                                                 </StackLayout>
@@ -123,13 +134,15 @@
                                     </CollectionView.ItemTemplate>
                                 </CollectionView>
 
-                                <!-- Button to update order status -->
+                                <!-- Кнопка обновления статуса заказа -->
                                 <Button Text="Update Status"
                                         FontSize="12"
                                         Padding="5"
                                         Command="{Binding UpdateOrderStatusCommand, Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}}"
                                         CommandParameter="{Binding .}"
-                                        HorizontalOptions="End" />
+                                        HorizontalOptions="End"
+                                        BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                                        TextColor="{DynamicResource PrimaryTextColor}" />
                             </StackLayout>
                         </Frame>
                     </ViewCell>

@@ -2,27 +2,51 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="KioskApp.Views.ProfilePage"
              Title="Profile">
-    <StackLayout Padding="20">
-        <Label Text="Profile" FontSize="24" HorizontalOptions="Center" />
+    <!-- Основной контейнер с прокруткой для удобства на разных устройствах -->
+    <ScrollView>
+        <StackLayout Padding="20"
+                     Spacing="20">
+            <!-- Заголовок страницы -->
+            <Label Text="Profile"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   Margin="0,10,0,20" />
 
-        <!-- Отображение информации о пользователе, если он аутентифицирован -->
-        <StackLayout IsVisible="{Binding IsAuthenticated}">
-            <Label Text="{Binding CurrentUser.Email, StringFormat='Email: {0}'}" />
-            <Label Text="{Binding CurrentUser.FirstName, StringFormat='First Name: {0}'}" />
-            <Label Text="{Binding CurrentUser.LastName, StringFormat='Last Name: {0}'}" />
-            <Label Text="{Binding CurrentUser.Building, StringFormat='Building: {0}'}" />
-            <Label Text="{Binding CurrentUser.RoomNumber, StringFormat='Room number: {0}'}" />
-            <Label Text="{Binding CurrentUser.Language, StringFormat='Language: {0}'}" />
-            <Label Text="{Binding CurrentUser.PlaceOfBirth, StringFormat='Place of birthday: {0}'}" />
+            <!-- Блок отображения информации для аутентифицированных пользователей -->
+            <StackLayout IsVisible="{Binding IsAuthenticated}"
+                         Spacing="10">
+                <Label Text="{Binding CurrentUser.Email, StringFormat='Email: {0}'}"
+                       FontSize="16" />
+                <Label Text="{Binding CurrentUser.FirstName, StringFormat='First Name: {0}'}"
+                       FontSize="16" />
+                <Label Text="{Binding CurrentUser.LastName, StringFormat='Last Name: {0}'}"
+                       FontSize="16" />
+                <Label Text="{Binding CurrentUser.Building, StringFormat='Building: {0}'}"
+                       FontSize="16" />
+                <Label Text="{Binding CurrentUser.RoomNumber, StringFormat='Room number: {0}'}"
+                       FontSize="16" />
+                <Label Text="{Binding CurrentUser.Language, StringFormat='Language: {0}'}"
+                       FontSize="16" />
+                <!-- Для PlaceOfBirth добавлен префикс через StringFormat -->
+                    <Label Text=""/>
+                       FontSize="16" />
 
-            <Button Text="Logout" Command="{Binding LogoutCommand}" />
+                <Button Text="Logout"
+                        Command="{Binding LogoutCommand}"
+                        FontSize="16" />
+            </StackLayout>
+
+            <!-- Блок отображения кнопок, когда пользователь не аутентифицирован -->
+            <StackLayout IsVisible="{Binding IsNotAuthenticated}"
+                         Spacing="10">
+                <Button Text="Login"
+                        Command="{Binding NavigateToLoginCommand}"
+                        FontSize="16" />
+                <Button Text="Register"
+                        Command="{Binding NavigateToRegisterCommand}"
+                        FontSize="16" />
+            </StackLayout>
         </StackLayout>
-
-
-        <!-- Отображение кнопок входа и регистрации, если пользователь не аутентифицирован -->
-        <StackLayout IsVisible="{Binding IsNotAuthenticated}">
-            <Button Text="Login" Command="{Binding NavigateToLoginCommand}" />
-            <Button Text="Register" Command="{Binding NavigateToRegisterCommand}" />
-        </StackLayout>
-    </StackLayout>
+    </ScrollView>
 </ContentPage>

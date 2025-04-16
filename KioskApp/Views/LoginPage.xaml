@@ -2,15 +2,61 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="KioskApp.Views.LoginPage"
-             Title="Login">
-    <StackLayout Padding="10">
-        <Entry Text="{Binding Email}" x:Name="emailEntry" Placeholder="Email" Keyboard="Email" />
-        <Entry Text="{Binding Password}" x:Name="passwordEntry" Placeholder="Password" IsPassword="True" />
-        <CheckBox x:Name="showPasswordCheckBox" CheckedChanged="OnShowPasswordCheckedChanged" />
-        <Button Text="Login" Clicked="OnLoginClicked" />
-        <Button Text="Register" Command="{Binding NavigateToRegisterCommand}" />
+             Title="Login"
+             BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
+    <!-- Оборачиваем содержимое в ScrollView для поддержки адаптивности -->
+    <ScrollView>
+        <StackLayout Padding="20"
+                     Spacing="20">
+            <!-- Заголовок страницы -->
+            <Label Text="Login"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   HorizontalOptions="Center"
+                   Margin="0,10,0,20" />
 
-        <!-- Error Message Label -->
-        <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBooleanConverter}}" />
-    </StackLayout>
+            <!-- Поле ввода Email с тёмным фоном -->
+            <Entry Text="{Binding Email}"
+                   x:Name="emailEntry"
+                   Placeholder="Email"
+                   Keyboard="Email"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
+
+            <!-- Поле ввода Password с тёмным фоном -->
+            <Entry Text="{Binding Password}"
+                   x:Name="passwordEntry"
+                   Placeholder="Password"
+                   IsPassword="True"
+                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                   TextColor="{DynamicResource PrimaryTextColor}"
+                   FontSize="16" />
+
+            <!-- CheckBox для показа/скрытия пароля -->
+            <CheckBox x:Name="showPasswordCheckBox"
+                      CheckedChanged="OnShowPasswordCheckedChanged" />
+
+            <!-- Кнопка для входа -->
+            <Button Text="Login"
+                    Clicked="OnLoginClicked"
+                    BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                    TextColor="{DynamicResource PrimaryTextColor}"
+                    FontSize="16" />
+
+            <!-- Кнопка для перехода к регистрации -->
+            <Button Text="Register"
+                    Command="{Binding NavigateToRegisterCommand}"
+                    BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                    TextColor="{DynamicResource PrimaryTextColor}"
+                    FontSize="16" />
+
+            <!-- Метка для вывода сообщения об ошибке -->
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="{DynamicResource AccentColor}"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBooleanConverter}}"
+                   FontSize="14" />
+        </StackLayout>
+    </ScrollView>
 </ContentPage>

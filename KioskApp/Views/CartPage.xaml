@@ -115,10 +115,10 @@
                     </CollectionView.ItemTemplate>
                 </CollectionView>
 
-                <StackLayout Orientation="Horizontal">
+                <!--<StackLayout Orientation="Horizontal">
                     <Label Text="Total price - "/>
                     <Label Text="x"/>
-                </StackLayout>
+                </StackLayout>-->
                 
                 <StackLayout>
 
