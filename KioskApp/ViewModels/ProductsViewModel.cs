@@ -31,6 +31,7 @@ namespace KioskApp.ViewModels
         public ICommand NavigateToEditProductCommand { get; private set; }
         public ICommand ToggleVisibilityCommand { get; private set; }
         public ICommand AddToCartCommand { get; }
+        public ICommand SpeakDescriptionCommand { get; }
 
         public bool IsAdmin
         {
@@ -61,6 +62,7 @@ namespace KioskApp.ViewModels
             DeleteProductCommand = new Command<Product>(async (product) => await DeleteProduct(product));
             NavigateToEditProductCommand = new Command<Product>(async (product) => await NavigateToEditProduct(product));
             ToggleVisibilityCommand = new Command<Product>(async (product) => await ToggleVisibility(product));
+            SpeakDescriptionCommand = new Command<Product>(async product => await SpeakDescriptionAsync(product));
 
             Debug.WriteLine("ProductsViewModel initialized.");
             LoadProductsCommand.Execute(null);
@@ -228,6 +230,26 @@ namespace KioskApp.ViewModels
         {
             Debug.WriteLine($"Confirming order for product {productId} with quantity {quantity}.");
             await _productApiService.ConfirmOrder(productId, quantity);
+        }
+
+        private async Task SpeakDescriptionAsync(Product product)
+        {
+            if (string.IsNullOrWhiteSpace(product?.Description))
+                return;
+
+            try
+            {
+                var settings = new SpeechOptions
+                {
+                    Volume = 1.0f,
+                    Pitch = 1.0f
+                };
+                await TextToSpeech.Default.SpeakAsync(product.Description, settings);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"TTS error: {ex.Message}");
+            }
         }
 
 

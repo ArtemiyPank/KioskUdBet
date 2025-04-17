@@ -53,10 +53,29 @@
                                        FontSize="16" />
 
                                 <!-- Описание продукта -->
-                                <Label Text="{Binding Description, StringFormat='Description: {0}'}"
-                                       TextColor="{DynamicResource PrimaryTextColor}"
-                                       FontSize="14" />
+                                <Grid ColumnSpacing="5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
 
+                                    <Label Text="{Binding Description, StringFormat='Description: {0}'}"
+                                           TextColor="{DynamicResource PrimaryTextColor}"
+                                           FontSize="14"
+                                           Grid.Row="0"
+                                           Grid.Column="0" />
+                                    <Button Text="🔊"
+                                            Command="{Binding Path=BindingContext.SpeakDescriptionCommand, Source={x:Reference productsPage}}"
+                                            CommandParameter="{Binding .}"
+                                            TextColor="{DynamicResource PrimaryTextColor}"
+                                            FontSize="10"
+                                            Grid.Row="0"
+                                            Grid.Column="1" />
+                                </Grid>
                                 <!-- Цена продукта -->
                                 <Label Text="{Binding Price, StringFormat='Price: {0:C}'}"
                                        TextColor="{DynamicResource PrimaryTextColor}"
