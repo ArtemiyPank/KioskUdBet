@@ -83,7 +83,7 @@ namespace KioskApp.ViewModels
                 // Set the global flag to avoid stock operations during deserialization.
                 DeserializationHelper.IsDeserializing = true;
 
-                var orders = await _orderApiService.GetOrders();
+                var orders = await _orderApiService.GetActiveOrders();
 
                 Orders.Clear();
                 if (orders != null)

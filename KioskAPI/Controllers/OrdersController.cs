@@ -220,6 +220,33 @@ namespace KioskAPI.Controllers
                 return StatusCode(500, new { Message = $"Internal server error: {ex.Message}" });
             }
         }
+
+        // GET: api/order/active
+        [HttpGet("active")]
+        public async Task<IActionResult> GetActiveOrders()
+        {
+            try
+            {
+                Console.WriteLine("Retrieving active orders (status not Delivered and not Not placed)");
+
+                var allOrders = await _orderService.GetAllOrdersAsync();
+
+                // Фильтруем: оставляем только те, где статус не Delivered и не Not placed
+                var activeOrders = allOrders
+                    .Where(o => !string.Equals(o.Status, "Delivered", StringComparison.OrdinalIgnoreCase)
+                             && !string.Equals(o.Status, "Not placed", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                Console.WriteLine($"Returning {activeOrders.Count} active orders");
+                return Ok(activeOrders);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving active orders: {ex.Message}");
+                return StatusCode(500, new { Message = $"Internal server error: {ex.Message}" });
+            }
+        }
+
     }
 
 

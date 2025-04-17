@@ -28,10 +28,12 @@
                        FontSize="16" />
                 <Label Text="{Binding CurrentUser.Language, StringFormat='Language: {0}'}"
                        FontSize="16" />
-                <!-- Для PlaceOfBirth добавлен префикс через StringFormat -->
-                    <Label Text=""/>
+                <HorizontalStackLayout>
+                    <Label Text="Place of birthday: "
+                           FontSize="16" />
+                    <Label Text="{Binding CurrentUser.PlaceOfBirth, Mode=TwoWay, StringFormat='{0}'}"
                        FontSize="16" />
-
+                </HorizontalStackLayout>
                 <Button Text="Logout"
                         Command="{Binding LogoutCommand}"
                         FontSize="16" />

@@ -8,6 +8,7 @@ namespace KioskApp.Services
     {
         Task<Order> PlaceOrder(Order order);
         Task<List<Order>> GetOrders();
+        Task<List<Order>> GetActiveOrders();
         Task<Order> GetOrderById(int orderId);
         Task<Order> GetLastOrderOrCreateEmpty(int userId);
         Task<bool> UpdateOrderStatus(int orderId, string status);

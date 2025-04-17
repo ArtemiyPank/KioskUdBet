@@ -87,6 +87,54 @@ namespace KioskApp.Services
         }
 
 
+        public async Task<List<Order>> GetActiveOrders()
+        {
+            try
+            {
+                // Устанавливаем флаг, чтобы при десериализации не выполнялись операции со складом
+                DeserializationHelper.IsDeserializing = true;
+
+                // Отправляем GET-запрос на новый эндпоинт
+                var response = await _userApiService.SendRequestAsync(() =>
+                    new HttpRequestMessage(HttpMethod.Get, "api/order/active")
+                );
+
+                response.EnsureSuccessStatusCode();
+
+                // Стандартная десериализация JSON в List<Order>
+                var orders = await response.Content.ReadFromJsonAsync<List<Order>>();
+
+                // После десериализации выключаем управление запасами для каждого item
+                if (orders != null)
+                {
+                    foreach (var order in orders)
+                    {
+                        if (order.OrderItems != null)
+                        {
+                            foreach (var item in order.OrderItems)
+                            {
+                                item.ShouldManageStock = false;
+                            }
+                        }
+                    }
+                }
+
+                return orders;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting active orders: {ex.Message}");
+                throw;
+            }
+            finally
+            {
+                // Сбрасываем флаг
+                DeserializationHelper.IsDeserializing = false;
+            }
+        }
+
+
+
         public async Task<Order> GetLastOrderOrCreateEmpty(int userId)
         {
             try
