@@ -1,14 +1,8 @@
-﻿using KioskApp.Models;
-using KioskApp.Services;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
-using System.Threading.Tasks;
+using KioskApp.Models;
 
 namespace KioskApp.Services
 {
@@ -17,314 +11,169 @@ namespace KioskApp.Services
         private readonly HttpClient _httpClient;
         private readonly IUserApiService _userApiService;
 
-
-
-
-        public ProductApiService(HttpClient httpClient)
+        public ProductApiService(HttpClient httpClient, IUserApiService userApiService)
         {
             _httpClient = httpClient;
-            _userApiService = DependencyService.Get<IUserApiService>();
+            _userApiService = userApiService;
         }
 
-        public async Task<Stream> DownloadProductImage(string imageUrl)
+        // Download: fetch raw image stream by URL
+        public async Task<Stream> DownloadProductImageAsync(string imageUrl)
         {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+                throw new ArgumentNullException(nameof(imageUrl), "Image URL cannot be null or empty.");
+
             try
             {
-                Debug.WriteLine("in DownloadProductImage");
-
-                if (string.IsNullOrEmpty(imageUrl))
-                {
-                    Debug.WriteLine("Error: imageUrl is null or empty.");
-                    throw new ArgumentNullException(nameof(imageUrl), "Image URL cannot be null or empty.");
-                }
-
+                Debug.WriteLine("Downloading product image");
                 return await _httpClient.GetStreamAsync(imageUrl);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error downloading product image: {ex.Message}");
+                Debug.WriteLine($"Error downloading image: {ex.Message}");
                 throw;
             }
         }
 
-        public async Task<Product> GetProductById(int productId)
+        // GET: api/products/{id}
+        public async Task<Product> GetProductByIdAsync(int productId)
         {
-            try
-            {
-                var response = await _userApiService.SendRequestAsync(() =>
-                {
-                    return new HttpRequestMessage(HttpMethod.Get, $"api/products/{productId}");
-                });
-
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadFromJsonAsync<Product>();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting product by ID: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<List<Product>> GetProducts()
-        {
-            try
-            {
-                var response = await _userApiService.SendRequestAsync(() =>
-                {
-                    return new HttpRequestMessage(HttpMethod.Get, "api/products/getProducts");
-                });
-
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadFromJsonAsync<List<Product>>();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting products: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<Product> AddProduct(Product product, Stream imageStream, string imageName)
-        {
-            try
-            {
-                var content = new MultipartFormDataContent
-                {
-                    { new StringContent(product.Name ?? string.Empty), "Name" },
-                    { new StringContent(product.Description ?? string.Empty), "Description" },
-                    { new StringContent(product.Price?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty), "Price" },
-                    { new StringContent(product.Stock?.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "Stock" },
-                    { new StringContent(product.ReservedStock.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "ReservedStock" },
-                    { new StringContent(product.Category ?? string.Empty), "Category" },
-                    { new StringContent(product.LastUpdated.ToString("o")), "LastUpdated" }
-                };
-
-                if (imageStream != null)
-                {
-                    imageStream.Position = 0;
-                    var imageContent = new StreamContent(imageStream);
-                    imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-                    content.Add(imageContent, "image", imageName);
-
-                    product.ImageUrl = $"/images/{imageName}";
-                }
-
-                content.Add(new StringContent(product.ImageUrl ?? string.Empty), "ImageUrl");
-
-                var response = await _userApiService.SendRequestAsync(() =>
-                {
-                    return new HttpRequestMessage(HttpMethod.Post, "api/products/addProduct")
-                    {
-                        Content = content
-                    };
-                });
-
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadFromJsonAsync<Product>();
-            }
-            catch (HttpRequestException ex)
-            {
-                Debug.WriteLine($"HttpRequestException: {ex.Message}");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error while adding product: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<bool> UpdateProduct(Product product, Stream imageStream, string imageName)
-        {
-            try
-            {
-                var content = new MultipartFormDataContent
-                {
-                    { new StringContent(product.Id.ToString()), "Id" },
-                    { new StringContent(product.Name ?? string.Empty), "Name" },
-                    { new StringContent(product.Description ?? string.Empty), "Description" },
-                    { new StringContent(product.Price?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty), "Price" },
-                    { new StringContent(product.Stock?.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "Stock" },
-                    { new StringContent(product.ReservedStock.ToString(CultureInfo.InvariantCulture) ?? string.Empty), "ReservedStock" },
-                    { new StringContent(product.Category ?? string.Empty), "Category" },
-                    { new StringContent(product.LastUpdated.ToString("o")), "LastUpdated" }
-                };
-
-                if (imageStream != null)
-                {
-                    imageStream.Position = 0;
-                    var imageContent = new StreamContent(imageStream);
-                    imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-                    content.Add(imageContent, "image", imageName);
-
-                    product.ImageUrl = $"/images/{imageName}";
-                }
-
-                content.Add(new StringContent(product.ImageUrl ?? string.Empty), "ImageUrl");
-
-                var response = await _userApiService.SendRequestAsync(() =>
-                {
-                    return new HttpRequestMessage(HttpMethod.Put, $"api/products/updateProduct/{product.Id}")
-                    {
-                        Content = content
-                    };
-                });
-
-                response.EnsureSuccessStatusCode();
-                return true;
-            }
-            catch (HttpRequestException ex)
-            {
-                Debug.WriteLine($"HttpRequestException: {ex.Message}");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error while updating product: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<bool> DeleteProduct(int productId)
-        {
-            try
-            {
-                var response = await _userApiService.SendRequestAsync(() =>
-                {
-                    return new HttpRequestMessage(HttpMethod.Delete, $"api/products/{productId}");
-                });
-
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error deleting product: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<bool> ToggleVisibility(int productId)
-        {
-            try
-            {
-                var response = await _userApiService.SendRequestAsync(() =>
-                {
-                    return new HttpRequestMessage(HttpMethod.Put, $"api/products/toggleVisibility/{productId}");
-                });
-
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error toggling visibility: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<Order> PlaceOrder(Order order)
-        {
-            try
-            {
-                var response = await _userApiService.SendRequestAsync(() =>
-                {
-                    return new HttpRequestMessage(HttpMethod.Post, "api/orders")
-                    {
-                        Content = JsonContent.Create(order)
-                    };
-                });
-
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadFromJsonAsync<Order>();
-            }
-            catch (HttpRequestException ex)
-            {
-                Debug.WriteLine($"HttpRequestException: {ex.Message}");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error placing order: {ex.Message}");
-                throw;
-            }
-        }
-
-        // Метод для резервирования товара
-        public async Task<ProductStockResponse> ReserveProductStock(int productId, int quantity)
-        {
-            var requestBody = new
-            {
-                ProductId = productId,
-                Quantity = quantity
-            };
-
-            var response = await _userApiService.SendRequestAsync(() =>
-            {
-                return new HttpRequestMessage(HttpMethod.Post, "api/products/reserve")
-                {
-                    Content = JsonContent.Create(requestBody)
-                };
-            });
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Get, $"api/products/{productId}")
+            );
 
             response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<Product>();
+        }
 
-            // Десериализуем объект, содержащий доступные и зарезервированные запасы
+        // GET: api/products/getProducts
+        public async Task<List<Product>> GetProductsAsync()
+        {
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Get, "api/products/getProducts")
+            );
+
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<Product>>();
+        }
+
+        // POST: api/products/addProduct
+        public async Task<Product> AddProductAsync(Product product, Stream imageStream, string imageName)
+        {
+            var content = BuildMultipartContent(product, imageStream, imageName);
+
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Post, "api/products/addProduct") { Content = content }
+            );
+
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<Product>();
+        }
+
+        // PUT: api/products/updateProduct/{id}
+        public async Task<bool> UpdateProductAsync(Product product, Stream imageStream, string imageName)
+        {
+            var content = BuildMultipartContent(product, imageStream, imageName);
+
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Put, $"api/products/updateProduct/{product.Id}") { Content = content }
+            );
+
+            return response.IsSuccessStatusCode;
+        }
+
+        // DELETE: api/products/{id}
+        public async Task<bool> DeleteProductAsync(int productId)
+        {
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Delete, $"api/products/{productId}")
+            );
+
+            return response.IsSuccessStatusCode;
+        }
+
+        // PUT: api/products/toggleVisibility/{id}
+        public async Task<bool> ToggleVisibilityAsync(int productId)
+        {
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Put, $"api/products/toggleVisibility/{productId}")
+            );
+
+            return response.IsSuccessStatusCode;
+        }
+
+        // POST: api/products/reserve
+        public async Task<ProductStockResponse> ReserveProductStockAsync(int productId, int quantity)
+        {
+            var request = new { ProductId = productId, Quantity = quantity };
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Post, "api/products/reserve") { Content = JsonContent.Create(request) }
+            );
+
+            response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<ProductStockResponse>();
         }
 
-        // Метод для освобождения товара
-        public async Task<ProductStockResponse> ReleaseProductStock(int productId, int quantity)
+        // POST: api/products/release
+        public async Task<ProductStockResponse> ReleaseProductStockAsync(int productId, int quantity)
         {
-            var requestBody = new
-            {
-                ProductId = productId,
-                Quantity = quantity
-            };
-
-            var response = await _userApiService.SendRequestAsync(() =>
-            {
-                return new HttpRequestMessage(HttpMethod.Post, "api/products/release")
-                {
-                    Content = JsonContent.Create(requestBody)
-                };
-            });
+            var request = new { ProductId = productId, Quantity = quantity };
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Post, "api/products/release") { Content = JsonContent.Create(request) }
+            );
 
             response.EnsureSuccessStatusCode();
-
-            // Десериализуем объект, содержащий доступные и зарезервированные запасы
             return await response.Content.ReadFromJsonAsync<ProductStockResponse>();
         }
 
-        // Получение доступного количества товара
-        public async Task<int> GetAvailableStock(int productId)
+        // GET: api/products/{id}/availableStock
+        public async Task<int> GetAvailableStockAsync(int productId)
         {
-            var response = await _userApiService.SendRequestAsync(() =>
-            {
-                return new HttpRequestMessage(HttpMethod.Get, $"api/products/{productId}/availableStock");
-            });
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Get, $"api/products/{productId}/availableStock")
+            );
 
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<int>();
         }
 
-        // Новый метод для подтверждения заказа
-        public async Task ConfirmOrder(int productId, int quantity)
+        // POST: api/products/{id}/confirmOrder
+        public async Task ConfirmOrderAsync(int productId, int quantity)
         {
-            var requestBody = new
-            {
-                ProductId = productId,
-                Quantity = quantity
-            };
-
-            var response = await _userApiService.SendRequestAsync(() =>
-            {
-                return new HttpRequestMessage(HttpMethod.Post, $"api/products/{productId}/confirmOrder")
-                {
-                    Content = JsonContent.Create(requestBody)
-                };
-            });
+            var request = new { ProductId = productId, Quantity = quantity };
+            var response = await _userApiService.SendRequestAsync(
+                () => new HttpRequestMessage(HttpMethod.Post, $"api/products/{productId}/confirmOrder") { Content = JsonContent.Create(request) }
+            );
 
             response.EnsureSuccessStatusCode();
+        }
+
+        // Helper: construct multipart form data for product with optional image
+        private MultipartFormDataContent BuildMultipartContent(Product product, Stream imageStream, string imageName)
+        {
+            var content = new MultipartFormDataContent
+            {
+                { new StringContent(product.Id.ToString()), "id" },
+                { new StringContent(product.Name ?? string.Empty), "Name" },
+                { new StringContent(product.Description ?? string.Empty), "Description" },
+                { new StringContent(product.Price?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty), "Price" },
+                { new StringContent((product.Stock ?? 0).ToString(CultureInfo.InvariantCulture)), "Stock" },
+                { new StringContent(product.ReservedStock.ToString(CultureInfo.InvariantCulture)), "ReservedStock" },
+                { new StringContent(product.Category ?? string.Empty), "Category" },
+                { new StringContent(product.LastUpdated.ToString("o")), "LastUpdated" }
+            };
+
+            if (imageStream != null)
+            {
+                imageStream.Position = 0;
+                var imageContent = new StreamContent(imageStream);
+                imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
+                content.Add(imageContent, "image", imageName);
+                product.ImageUrl = $"/images/{imageName}";
+            }
+
+            content.Add(new StringContent(product.ImageUrl ?? string.Empty), "ImageUrl");
+            return content;
         }
     }
 }

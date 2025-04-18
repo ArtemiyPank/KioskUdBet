@@ -1,6 +1,6 @@
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:KioskApp.ViewModels"
              xmlns:sliders="clr-namespace:Syncfusion.Maui.Sliders;assembly=Syncfusion.Maui.Sliders"
              xmlns:stepProgressBar="clr-namespace:Syncfusion.Maui.ProgressBar;assembly=Syncfusion.Maui.ProgressBar"
              x:Class="KioskApp.Views.CartPage"
@@ -8,107 +8,157 @@
              Title="Cart">
 
     <StackLayout Padding="10">
-        <!-- If the user is not authenticated -->
+
+        <!-- Prompt to register when not authenticated -->
         <StackLayout IsVisible="{Binding IsNotAuthenticated}">
-            <Label Text="Please register to place an order." 
-                   FontSize="Medium" 
+            <Label Text="Please register to place an order."
+                   FontSize="Medium"
                    HorizontalOptions="Center" />
-            <Button Text="Register" 
+            <Button Text="Register"
                     Command="{Binding NavigateToRegisterCommand}"
                     HorizontalOptions="Center" />
         </StackLayout>
 
-        <!-- If the user is authenticated -->
+        <!-- Cart and order UI when authenticated -->
         <StackLayout IsVisible="{Binding IsAuthenticated}">
 
-            <!-- Content before placing the order -->
+            <!-- Before order is placed -->
             <StackLayout IsVisible="{Binding IsOrderNotPlaced}">
-                <StackLayout Padding="10">
-                    <Label Text="{Binding DeliveryLocation}" FontSize="Medium" HorizontalOptions="Center" />
 
-                    <!--<Label Text="Select time:" FontSize="Medium" HorizontalOptions="Center" />-->
+                <!-- Delivery location and time range -->
+                <Label Text="{Binding DeliveryLocation}"
+                       FontSize="Medium"
+                       HorizontalOptions="Center" />
+                <Label Text="{Binding SelectedTimeRangeText}"
+                       FontSize="Medium"
+                       HorizontalOptions="Center" />
 
-                    <Label Text="{Binding SelectedTimeRangeText}" FontSize="Medium" HorizontalOptions="Center" />
+                <!-- Time range slider -->
+                <sliders:SfDateTimeRangeSlider Minimum="2024-08-27T18:00:00"
+                                               Maximum="2024-08-27T22:00:00"
+                                               x:Name="timeRangeSlider"
+                                               IntervalType="Hours"
+                                               Interval="1"
+                                               DateFormat="HH:mm"
+                                               ShowTicks="True"
+                                               ShowLabels="True"
+                                               DragBehavior="Both"
+                                               RangeStart="{Binding SelectedStartTime, Mode=TwoWay}"
+                                               RangeEnd="{Binding SelectedEndTime, Mode=TwoWay}"
+                                               HeightRequest="60" />
 
-                    <sliders:SfDateTimeRangeSlider 
-                    x:Name="timeRangeSlider"
-                    Minimum="2024-08-27T18:00:00" 
-                    Maximum="2024-08-27T22:00:00"
-                    IntervalType="Hours"
-                    RangeStart="{Binding SelectedStartTime, Mode=TwoWay}" 
-                    RangeEnd="{Binding SelectedEndTime, Mode=TwoWay}" 
-                    ShowTicks="True"
-                    ShowLabels="True"
-                    Interval="1"
-                    DateFormat="HH:mm"
-                    DragBehavior="Both"
-                    ValueChanging="OnRangeSliderValueChanging"
-                    HorizontalOptions="FillAndExpand" />
-
-                </StackLayout>
-
-                <!-- List of cart items -->
-                <CollectionView ItemsSource="{Binding CartItems}" Margin="0,20,0,0">
+                <!-- List of items in the cart -->
+                <CollectionView ItemsSource="{Binding CartItems}"
+                                Margin="0,20,0,0">
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
-                            <Frame BorderColor="LightGray" Padding="5" Margin="5" CornerRadius="10">
-                                <Grid ColumnDefinitions="Auto, *, Auto, Auto, Auto" RowDefinitions="Auto">
-                                    <!-- Product Image -->
-                                    <Image Source="{Binding Product.ImageUrl}" HeightRequest="50" WidthRequest="50" Grid.Column="0" VerticalOptions="Center" HorizontalOptions="Start" />
+                            <Frame BorderColor="LightGray"
+                                   Padding="5"
+                                   Margin="5"
+                                   CornerRadius="10">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                                      RowDefinitions="Auto">
+                                    <!-- Product image -->
+                                    <Image Source="{Binding Product.ImageUrl}"
+                                           HeightRequest="50"
+                                           WidthRequest="50"
+                                           Grid.Column="0"
+                                           VerticalOptions="Center" />
 
-                                    <!-- Product Name and Type -->
-                                    <StackLayout Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Start" Margin="10,0,0,0">
-                                        <Label Text="{Binding Product.Name}" FontAttributes="Bold" />
-                                        <Label Text="{Binding Product.Category}" FontSize="Small" TextColor="Gray" />
+                                    <!-- Product details -->
+                                    <StackLayout Grid.Column="1"
+                                                 VerticalOptions="Center"
+                                                 Margin="10,0,0,0">
+                                        <Label Text="{Binding Product.Name}"
+                                               FontAttributes="Bold" />
+                                        <Label Text="{Binding Product.Category}"
+                                               FontSize="Small"
+                                               TextColor="Gray" />
                                     </StackLayout>
 
-                                    <!-- Quantity Buttons -->
-                                    <StackLayout Orientation="Horizontal" Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End">
-                                        <Button Text="-" Command="{Binding Path=BindingContext.DecreaseQuantityCommand, Source={x:Reference cartPage}}" CommandParameter="{Binding .}" WidthRequest="35" />
-                                        <Label Text="{Binding Quantity}" VerticalOptions="Center" HorizontalOptions="Center" Margin="5,0"/>
-                                        <Button Text="+" Command="{Binding Path=BindingContext.IncreaseQuantityCommand, Source={x:Reference cartPage}}" CommandParameter="{Binding .}" WidthRequest="35" />
+                                    <!-- Quantity controls -->
+                                    <StackLayout Orientation="Horizontal"
+                                                 Grid.Column="2"
+                                                 VerticalOptions="Center">
+                                        <Button Text="-"
+                                                WidthRequest="35"
+                                                Command="{Binding Source={x:Reference cartPage}, Path=BindingContext.DecreaseQuantityCommand}"
+                                                CommandParameter="{Binding .}" />
+                                        <Label Text="{Binding Quantity}"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="Center"
+                                               Margin="5,0" />
+                                        <Button Text="+"
+                                                WidthRequest="35"
+                                                Command="{Binding Source={x:Reference cartPage}, Path=BindingContext.IncreaseQuantityCommand}"
+                                                CommandParameter="{Binding .}" />
                                     </StackLayout>
 
-                                    <!-- Product Price -->
-                                    <Label Text="{Binding TotalPrice, StringFormat='{0:C}'}" Grid.Column="3" VerticalOptions="Center" HorizontalOptions="End" FontSize="Medium" Margin="10,0,0,0"/>
+                                    <!-- Item total price -->
+                                    <Label Text="{Binding TotalPrice, StringFormat='{0:C}'}"
+                                           Grid.Column="3"
+                                           VerticalOptions="Center"
+                                           HorizontalOptions="End"
+                                           FontSize="Medium" />
                                 </Grid>
                             </Frame>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
 
-                <Button Text="Place Order" Command="{Binding PlaceOrderCommand}" Margin="0,20,0,0"/>
+                <!-- Button to place the order -->
+                <Button Text="Place Order"
+                        Command="{Binding PlaceOrderCommand}"
+                        Margin="0,20,0,0" />
             </StackLayout>
 
-            <!-- Content after placing the order -->
-            <StackLayout IsVisible="{Binding IsOrderPlaced}" Padding="10">
-                <Label Text="Order Summary" FontSize="Large" FontAttributes="Bold"  HorizontalOptions="Center" />
+            <!-- After order is placed -->
+            <StackLayout IsVisible="{Binding IsOrderPlaced}"
+                         Padding="10">
+                <Label Text="Order Summary"
+                       FontSize="Large"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center" />
+                <Label Text="{Binding DeliveryLocation}"
+                       FontSize="Medium"
+                       HorizontalOptions="Center" />
+                <Label Text="{Binding SelectedTimeRangeText}"
+                       FontSize="Medium"
+                       HorizontalOptions="Center" />
 
-                <Label Text="{Binding DeliveryLocation}" FontSize="Medium" HorizontalOptions="Center" />
-                <Label Text="{Binding SelectedTimeRangeText}" FontSize="Medium" HorizontalOptions="Center" />
-
-                <!-- Compact list of ordered items -->
-                <CollectionView ItemsSource="{Binding CartItems}" Margin="0,20,0,0">
+                <!-- Compact summary of ordered items -->
+                <CollectionView ItemsSource="{Binding CartItems}"
+                                Margin="0,20,0,0">
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
-                            <Frame BorderColor="LightGray" Padding="5" Margin="5" CornerRadius="10">
-                                <Grid ColumnDefinitions="Auto, *, Auto, Auto, Auto" RowDefinitions="Auto">
-                                    <!-- Product Image -->
-                                    <Image Source="{Binding Product.ImageUrl}" HeightRequest="50" WidthRequest="50" Grid.Column="0" VerticalOptions="Center" HorizontalOptions="Start" />
+                            <Frame BorderColor="LightGray"
+                                   Padding="5"
+                                   Margin="5"
+                                   CornerRadius="10">
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                      RowDefinitions="Auto">
+                                    <Image Source="{Binding Product.ImageUrl}"
+                                           HeightRequest="50"
+                                           WidthRequest="50"
+                                           Grid.Column="0"
+                                           VerticalOptions="Center" />
 
-                                    <!-- Product Name and Type -->
-                                    <StackLayout Grid.Column="1" Orientation="Horizontal" VerticalOptions="Center">
-                                        <StackLayout VerticalOptions="Center" HorizontalOptions="Start" Margin="10,0,0,0">
-                                            <Label Text="{Binding Product.Name}" FontAttributes="Bold" />
-                                            <Label Text="{Binding Product.Category}" FontSize="Small" TextColor="Gray" />
-                                        </StackLayout>
-                                        <Label Text="x" Margin="5, 0"/>
-                                        <Label Text="{Binding Quantity}"/>
+                                    <StackLayout Grid.Column="1"
+                                                 Orientation="Horizontal"
+                                                 VerticalOptions="Center"
+                                                 Margin="10,0,0,0">
+                                        <Label Text="{Binding Product.Name}"
+                                               FontAttributes="Bold" />
+                                        <Label Text=" x "
+                                               Margin="5,0" />
+                                        <Label Text="{Binding Quantity}" />
                                     </StackLayout>
 
-
-                                    <!-- Product Price -->
-                                    <Label Text="{Binding TotalPrice, StringFormat='{0:C}'}" Grid.Column="3" VerticalOptions="Center" HorizontalOptions="End" FontSize="Medium" Margin="10,0,0,0"/>
+                                    <Label Text="{Binding TotalPrice, StringFormat='{0:C}'}"
+                                           Grid.Column="2"
+                                           VerticalOptions="Center"
+                                           HorizontalOptions="End"
+                                           FontSize="Medium" />
                                 </Grid>
                             </Frame>
                         </DataTemplate>
@@ -119,23 +169,24 @@
                     <Label Text="Total price - "/>
                     <Label Text="x"/>
                 </StackLayout>-->
-                
-                <StackLayout>
 
-                    <stepProgressBar:SfStepProgressBar
-                    x:Name="stepProgress"
-                    VerticalOptions="Center"
-                    HorizontalOptions="Center"                                        
-                    Orientation="Horizontal"                                                                                       
-                    LabelSpacing="12"
-                    ActiveStepIndex="{Binding OrderStatusValue}"
-                    ActiveStepProgressValue="{Binding OrderStatusProgress}"
-                    ItemsSource="{Binding StepProgressItem}">
-                    </stepProgressBar:SfStepProgressBar>
-                </StackLayout>
+                <!-- Step progress bar for order status -->
+                <stepProgressBar:SfStepProgressBar ItemsSource="{Binding StepProgressItem}"
+                                                   ActiveStepIndex="{Binding OrderStatusValue}"
+                                                   ActiveStepProgressValue="{Binding OrderStatusProgress}"
+                                                   LabelSpacing="12"
+                                                   Orientation="Horizontal"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center"
+                                                   Margin="0,20,0,0" />
 
-                <Button Text="New Order" Command="{Binding PrepareForTheNextOrderCommand}" IsVisible="{Binding IsOrderDelivered}" Margin="0,20,0,0"/>
+                <!-- Button to start a new order after delivery -->
+                <Button Text="New Order"
+                        Command="{Binding PrepareForTheNextOrderCommand}"
+                        IsVisible="{Binding IsOrderDelivered}"
+                        Margin="0,20,0,0" />
             </StackLayout>
+
         </StackLayout>
     </StackLayout>
 </ContentPage>

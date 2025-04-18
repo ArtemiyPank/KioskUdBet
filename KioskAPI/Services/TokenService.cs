@@ -1,12 +1,9 @@
-﻿using KioskAPI.Models;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using System;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using KioskAPI.Models;
+using Microsoft.IdentityModel.Tokens;
 
 namespace KioskAPI.Services
 {
@@ -16,13 +13,15 @@ namespace KioskAPI.Services
         private readonly ILogger<TokenService> _logger;
         private readonly TokenValidationParameters _tokenValidationParameters;
 
-        public TokenService(IConfiguration configuration, ILogger<TokenService> logger)
+        public TokenService(
+            IConfiguration configuration,
+            ILogger<TokenService> logger)
         {
             _configuration = configuration;
             _logger = logger;
 
-
-            // Инициализация параметров валидации токенов
+            // Initialize token validation parameters
+            var keyBytes = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
             _tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -31,97 +30,99 @@ namespace KioskAPI.Services
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = _configuration["Jwt:Issuer"],
                 ValidAudience = _configuration["Jwt:Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]))
+                IssuerSigningKey = new SymmetricSecurityKey(keyBytes)
             };
         }
 
+        // Validate the given JWT and log its claims
         public void ValidateToken(string token)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
+            var handler = new JwtSecurityTokenHandler();
 
             try
             {
-                var principal = tokenHandler.ValidateToken(token, _tokenValidationParameters, out var validatedToken);
+                var principal = handler.ValidateToken(token, _tokenValidationParameters, out var validatedToken);
 
-                if (!(validatedToken is JwtSecurityToken jwtToken) ||
-                    !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                if (validatedToken is not JwtSecurityToken jwt ||
+                    !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    throw new SecurityTokenException("Invalid token");
+                    throw new SecurityTokenException("Invalid token signature algorithm");
                 }
 
-                // Логирование всех клеймов токена для отладки
+                // Log each claim for diagnostics
                 foreach (var claim in principal.Claims)
                 {
-                    _logger.LogInformation($"Claim Type: {claim.Type}, Value: {claim.Value}");
+                    _logger.LogInformation("Claim {Type} = {Value}", claim.Type, claim.Value);
                 }
-
-                var userId = principal.Claims.FirstOrDefault(c => c.Type == "Id")?.Value;
-                var userRole = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
-
-                _logger.LogInformation($"User ID: {userId}, Role: {userRole}");
-
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Token validation failed: {ex.Message}");
+                _logger.LogError(ex, "Token validation failed");
                 throw;
             }
         }
 
-
+        // Generate a short-lived JWT access token for the specified user
         public string GenerateAccessToken(User user)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var handler = new JwtSecurityTokenHandler();
+            var keyBytes = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
+
+            var descriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new Claim[]
+                Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim("Id", user.Id.ToString()), // Используем NameIdentifier для User ID
-                    new Claim(ClaimTypes.Role, user.Role) // Добавление User Role
+                    new Claim("Id", user.Id.ToString()),
+                    new Claim(ClaimTypes.Role, user.Role)
                 }),
-                Expires = DateTime.UtcNow.AddMinutes(30), // Краткосрочный токен на 30 минут
-                Issuer = _configuration["Jwt:Issuer"], // Добавление Issuer
-                Audience = _configuration["Jwt:Audience"], // Добавление Audience
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                Expires = DateTime.UtcNow.AddMinutes(30),
+                Issuer = _configuration["Jwt:Issuer"],
+                Audience = _configuration["Jwt:Audience"],
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(keyBytes),
+                    SecurityAlgorithms.HmacSha256Signature)
             };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+
+            var token = handler.CreateToken(descriptor);
+            return handler.WriteToken(token);
         }
 
-
+        // Create a long-lived refresh token for the specified user
         public RefreshToken GenerateRefreshToken(User user)
         {
-            var refreshToken = new RefreshToken
+            return new RefreshToken
             {
                 Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-                ExpiryDate = DateTime.UtcNow.AddYears(1), // Токен обновления на 1 год
+                ExpiryDate = DateTime.UtcNow.AddYears(1),
                 Created = DateTime.UtcNow,
                 UserId = user.Id
             };
-            return refreshToken;
         }
 
+        // Extract the claims principal from an expired JWT without validating its lifetime
         public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
-            var tokenValidationParameters = new TokenValidationParameters
+            var handler = new JwtSecurityTokenHandler();
+            var keyBytes = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
+
+            var validationParams = new TokenValidationParameters
             {
-                ValidateAudience = false,
                 ValidateIssuer = false,
+                ValidateAudience = false,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateLifetime = false // Не проверяем срок действия токена
+                IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+                ValidateLifetime = false
             };
 
-            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
-            var jwtSecurityToken = securityToken as JwtSecurityToken;
-            if (jwtSecurityToken == null || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+            var principal = handler.ValidateToken(token, validationParams, out var securityToken);
+
+            if (securityToken is not JwtSecurityToken jwt ||
+                !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+            {
                 throw new SecurityTokenException("Invalid token");
+            }
 
             return principal;
         }
     }
-
 }

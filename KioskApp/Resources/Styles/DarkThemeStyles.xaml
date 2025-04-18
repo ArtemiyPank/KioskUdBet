@@ -2,18 +2,28 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
                     x:Class="KioskApp.Resources.Styles.DarkThemeStyles">
-    <Color x:Key="PrimaryBackgroundColor">#121212</Color>
-    <Color x:Key="SecondaryBackgroundColor">#1E1E1E</Color>
-    <Color x:Key="PrimaryTextColor">#FFFFFF</Color>
-    <Color x:Key="SecondaryTextColor">#B0B0B0</Color>
-    <Color x:Key="AccentColor">#BB86FC</Color>
-    <Color x:Key="ButtonBackgroundColor">#2C2C2C</Color>
 
+    <!-- Dark theme color palette -->
+    <Color x:Key="PrimaryBackgroundColor">#121212</Color>
+    <!-- Main background for pages -->
+    <Color x:Key="SecondaryBackgroundColor">#1E1E1E</Color>
+    <!-- Background for cards and panels -->
+    <Color x:Key="PrimaryTextColor">#FFFFFF</Color>
+    <!-- Default text color -->
+    <Color x:Key="SecondaryTextColor">#B0B0B0</Color>
+    <!-- Subtle text color -->
+    <Color x:Key="AccentColor">#BB86FC</Color>
+    <!-- Accent for highlights -->
+    <Color x:Key="ButtonBackgroundColor">#2C2C2C</Color>
+    <!-- Default button background -->
+
+    <!-- Base style for all ContentPage elements -->
     <Style TargetType="ContentPage">
         <Setter Property="BackgroundColor"
                 Value="{StaticResource PrimaryBackgroundColor}" />
     </Style>
 
+    <!-- Default style for labels -->
     <Style TargetType="Label">
         <Setter Property="TextColor"
                 Value="{StaticResource PrimaryTextColor}" />
@@ -21,6 +31,7 @@
                 Value="Segoe UI" />
     </Style>
 
+    <!-- Default style for buttons -->
     <Style TargetType="Button">
         <Setter Property="BackgroundColor"
                 Value="{StaticResource ButtonBackgroundColor}" />
@@ -32,8 +43,10 @@
                 Value="10" />
     </Style>
 
+    <!-- Standard spacing for StackLayout -->
     <Style TargetType="StackLayout">
         <Setter Property="Spacing"
                 Value="15" />
     </Style>
+
 </ResourceDictionary>

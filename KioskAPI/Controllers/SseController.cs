@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
 namespace KioskAPI.Controllers
@@ -8,8 +7,11 @@ namespace KioskAPI.Controllers
     [Route("api/[controller]")]
     public class SseController : ControllerBase
     {
-        // Словари для наблюдателей (наблюдатели для статусов заказов и количества товаров)
-        private static ConcurrentDictionary<string, List<IObserver<(int, int, int)>>> _productObservers = new ConcurrentDictionary<string, List<IObserver<(int, int, int)>>>();
+        private static readonly ConcurrentDictionary<
+            string,
+            List<IObserver<(int productId, int stock, int reserved)>>>
+            _productObservers = new();
+
         private readonly ILogger<SseController> _logger;
 
         public SseController(ILogger<SseController> logger)
@@ -17,52 +19,54 @@ namespace KioskAPI.Controllers
             _logger = logger;
         }
 
-        // SSE для контроля количества всех товаров
+        // GET: api/sse/products/monitor
         [HttpGet("products/monitor")]
         public async Task SseProductQuantities()
         {
-            Console.WriteLine("In SseProductQuantities");
+            _logger.LogInformation("Client connected to SSE product monitor");
             Response.Headers.Add("Content-Type", "text/event-stream");
 
             var cancellationToken = HttpContext.RequestAborted;
             var observerId = Guid.NewGuid().ToString();
 
-            var observer = new ObserverProducts(async (productId, stock, reservedQuantity) =>
+            // Observer that pushes product quantity updates to the response stream
+            var observer = new ProductQuantityObserver(async (productId, stock, reserved) =>
             {
-                // Отправляем обновления для каждого продукта
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    await Response.WriteAsync($"data: {productId}:{stock}:{reservedQuantity}\n\n");
+                    await Response.WriteAsync($"data: {productId}:{stock}:{reserved}\n\n");
                     await Response.Body.FlushAsync();
                 }
             });
 
-            // Добавляем наблюдателя для всех товаров с уникальным ID
-            _productObservers.AddOrUpdate(observerId, new List<IObserver<(int, int, int)>> { observer }, (key, list) =>
-            {
-                list.Add(observer);
-                return list;
-            });
+            // Register the observer
+            _productObservers.AddOrUpdate(
+                observerId,
+                _ => new List<IObserver<(int, int, int)>> { observer },
+                (_, list) =>
+                {
+                    list.Add(observer);
+                    return list;
+                });
 
             try
             {
-                // Ожидание закрытия соединения
+                // Keep connection open until client disconnects
                 await Task.Delay(Timeout.Infinite, cancellationToken);
             }
             catch (TaskCanceledException)
             {
-                Console.WriteLine($"SSE connection closed by client. Observer ID: {observerId}");
+                _logger.LogInformation("SSE client disconnected: {ObserverId}", observerId);
             }
             finally
             {
-                // Удаление наблюдателя при закрытии соединения
+                // Unregister observer on disconnect
                 if (_productObservers.TryGetValue(observerId, out var observers))
                 {
-                    lock (observers)  // Потокобезопасное удаление
+                    lock (observers)
                     {
                         observers.Remove(observer);
                     }
-
                     if (observers.Count == 0)
                     {
                         _productObservers.TryRemove(observerId, out _);
@@ -71,44 +75,39 @@ namespace KioskAPI.Controllers
             }
         }
 
-        // Уведомление клиентов об изменении количества товара
-        public static void NotifyProductQuantityChanged(int productId, int stock, int reservedQuantity)
+        // Called by services to broadcast quantity updates to all observers
+        public static void NotifyProductQuantityChanged(int productId, int stock, int reserved)
         {
-            Console.WriteLine("In NotifyProductQuantityChanged");
-            foreach (var observersList in _productObservers.Values)
+            foreach (var observers in _productObservers.Values)
             {
-                lock (observersList)  // Потокобезопасное уведомление
+                lock (observers)
                 {
-                    foreach (var observer in observersList)
+                    foreach (var observer in observers)
                     {
-                        Console.WriteLine("In NotifyProductQuantityChanged foreach");
-
-                        observer.OnNext((productId, stock, reservedQuantity));
+                        observer.OnNext((productId, stock, reserved));
                     }
                 }
             }
         }
 
-        // Observer для отслеживания количества товаров
-        private class ObserverProducts : IObserver<(int, int, int)>
+        // Internal observer for product quantity SSE
+        private class ProductQuantityObserver : IObserver<(int productId, int stock, int reserved)>
         {
             private readonly Func<int, int, int, Task> _onNext;
 
-            public ObserverProducts(Func<int, int, int, Task> onNext)
+            public ProductQuantityObserver(Func<int, int, int, Task> onNext)
             {
                 _onNext = onNext;
             }
 
-            public void OnNext((int, int, int) value)
+            public void OnNext((int productId, int stock, int reserved) value)
             {
-                Console.WriteLine("In OnNext");
-
-                _onNext(value.Item1, value.Item2, value.Item3);
+                _ = _onNext(value.productId, value.stock, value.reserved);
             }
 
-            public void OnError(Exception error) { }
+            public void OnError(Exception error) { /* No action needed */ }
 
-            public void OnCompleted() { }
+            public void OnCompleted() { /* No action needed */ }
         }
     }
 }

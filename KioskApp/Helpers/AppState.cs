@@ -1,36 +1,35 @@
-﻿using KioskApp.Models;
-using KioskApp.ViewModels;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
+using KioskApp.Models;
 
 namespace KioskApp.Helpers
 {
     public class AppState
     {
-        public User? CurrentUser { get; set; } = null;
-        public string? AccessToken { get; set; } = null;
-        public bool? IsOrderPlaced { get; set; } = null;
+        // Currently logged-in user
+        public User? CurrentUser { get; set; }
 
-        public string TestStr = "Тут пусто"; 
+        // JWT access token for API calls
+        public string? AccessToken { get; set; }
 
-        public ObservableCollection<Product> Products = new ObservableCollection<Product>();
+        // Indicates whether the current order has been placed
+        public bool IsOrderPlaced { get; set; }
 
-        //ProductsViewModel _productsViewModel;
+        // Placeholder text for UI testing
+        public string TestStr { get; set; } = "Currently empty";
 
-        //AppState(ProductsViewModel productsViewModel)
-        //{
-        //    _productsViewModel = productsViewModel;
-        //    _productsViewModel.LoadProducts();
-        //}
+        // Collection of products available in the app
+        public ObservableCollection<Product> Products { get; } = new ObservableCollection<Product>();
 
+        // Write all products to debug output
         public void PrintProducts()
         {
-            Debug.WriteLine("==================== Products in AppState ====================");
+            Debug.WriteLine("=== Products in AppState ===");
             foreach (var product in Products)
             {
                 Debug.WriteLine(product.ToString());
             }
-            Debug.WriteLine("=======================================================================");
+            Debug.WriteLine("=== End of Products ===");
         }
     }
 }

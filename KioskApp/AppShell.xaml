@@ -1,25 +1,41 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<Shell
-    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:KioskApp.Views"
-    x:Class="KioskApp.AppShell">
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:local="clr-namespace:KioskApp.Views"
+       x:Class="KioskApp.AppShell">
 
+    <!-- Main tab bar for navigation -->
     <TabBar>
-        <Tab Title="Profile" Icon="profile_icon.png">
-            <ShellContent ContentTemplate="{DataTemplate local:ProfilePage}" />
-        </Tab>
-        <Tab Title="Products">
-            <ShellContent ContentTemplate="{DataTemplate local:ProductsPage}" />
-        </Tab>
-        
-        
-        <Tab x:Name="CartTab" Title="Cart" IsVisible="True">
-            <ShellContent ContentTemplate="{DataTemplate local:CartPage}" />
+
+        <!-- Profile tab: shows user profile or login/register -->
+        <Tab Title="Profile"
+             Icon="profile_icon.png">
+            <ShellContent Title="Profile"
+                          ContentTemplate="{DataTemplate local:ProfilePage}" />
         </Tab>
 
-        <Tab x:Name="OrdersTab" Title="Orders" IsVisible="False">
-            <ShellContent ContentTemplate="{DataTemplate local:OrdersPage}" />
+        <!-- Products tab: lists all products -->
+        <Tab Title="Products"
+             Icon="products_icon.png">
+            <ShellContent Title="Products"
+                          ContentTemplate="{DataTemplate local:ProductsPage}" />
+        </Tab>
+
+        <!-- Cart tab: always visible, allows adding/removing items -->
+        <Tab Title="Cart"
+             x:Name="CartTab"
+             Icon="cart_icon.png">
+            <ShellContent Title="Cart"
+                          ContentTemplate="{DataTemplate local:CartPage}" />
+        </Tab>
+
+        <!-- Orders tab: initially hidden; you can toggle IsVisible in code -->
+        <Tab x:Name="OrdersTab"
+             Title="Orders"
+             Icon="orders_icon.png"
+             IsVisible="False">
+            <ShellContent Title="Orders"
+                          ContentTemplate="{DataTemplate local:OrdersPage}" />
         </Tab>
 
     </TabBar>

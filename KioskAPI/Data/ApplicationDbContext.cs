@@ -5,32 +5,44 @@ namespace KioskAPI.Data
 {
     public class ApplicationDbContext : DbContext
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
 
+        // Table for application users
         public DbSet<User> Users { get; set; }
+
+        // Table for storing refresh tokens
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+
+        // Table for products available in the kiosk
         public DbSet<Product> Products { get; set; }
+
+        // Table for customer orders
         public DbSet<Order> Orders { get; set; }
+
+        // Table for items within each order
         public DbSet<OrderItem> OrderItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Настройка связи между Order и User
+            // Configure one-to-many: User → Orders
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.User)
-                .WithMany() // У пользователя может быть много заказов
+                .WithMany()                     // A user can have multiple orders
                 .HasForeignKey(o => o.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Конфигурация для OrderItem и Product
+            // Configure one-to-many: Product → OrderItems
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.Product)
-                .WithMany() // Предполагается, что у Product может быть много OrderItems
+                .WithMany()                     // A product can appear in multiple order items
                 .HasForeignKey(oi => oi.ProductId);
 
-            // Настройка связи между User и RefreshToken
+            // Configure one-to-one: User ↔ RefreshToken
             modelBuilder.Entity<User>()
                 .HasOne(u => u.RefreshToken)
                 .WithOne(rt => rt.User)

@@ -1,141 +1,105 @@
-﻿using KioskApp.Models;
+﻿using System.Windows.Input;
+using KioskApp.Models;
 using KioskApp.Services;
 using MvvmHelpers;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using System.Windows.Input;
 
 namespace KioskApp.ViewModels
 {
     public class RegisterViewModel : BaseViewModel
     {
-        private readonly IUserApiService _apiService;
         private readonly IUserService _userService;
-
-        public ICommand SetPlaceOfBirthCommand { get; }
 
         public RegisterViewModel()
         {
-            _apiService = DependencyService.Get<IUserApiService>();
             _userService = DependencyService.Get<IUserService>();
             SetPlaceOfBirthCommand = new Command(async () => await SetPlaceOfBirthByGeolocationAsync());
-
+            RegisterCommand = new Command(async () => await RegisterUserAsync());
         }
 
+        // Команда для автозаполнения места рождения
+        public ICommand SetPlaceOfBirthCommand { get; }
+        // Команда для регистрации
+        public ICommand RegisterCommand { get; }
+
+        // Поля и свойства для привязки
         private string _email;
         public string Email
         {
             get => _email;
-            set
-            {
-                _email = value;
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _email, value);
         }
 
         private string _password;
         public string Password
         {
             get => _password;
-            set
-            {
-                _password = value;
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _password, value);
         }
 
         private string _firstName;
         public string FirstName
         {
             get => _firstName;
-            set
-            {
-                _firstName = value;
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _firstName, value);
         }
 
         private string _lastName;
         public string LastName
         {
             get => _lastName;
-            set
-            {
-                _lastName = value;
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _lastName, value);
         }
 
         private string _building;
         public string Building
         {
             get => _building;
-            set
-            {
-                _building = value;
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _building, value);
         }
 
         private string _roomNumber;
         public string RoomNumber
         {
             get => _roomNumber;
-            set
-            {
-                _roomNumber = value;
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _roomNumber, value);
         }
 
         private string _language;
         public string Language
         {
             get => _language;
-            set
-            {
-                _language = value;
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _language, value);
         }
-
-        //private string _placeOfBirth;
-        //public string PlaceOfBirth
-        //{
-        //    get => _placeOfBirth;
-        //    set
-        //    {
-        //        _placeOfBirth = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
 
         private string _placeOfBirth;
         public string PlaceOfBirth
         {
             get => _placeOfBirth;
-            set
-            {
-                SetProperty(ref _placeOfBirth, value);
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _placeOfBirth, value);
         }
 
         private string _errorMessage;
         public string ErrorMessage
         {
             get => _errorMessage;
-            set
-            {
-                SetProperty(ref _errorMessage, value);
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _errorMessage, value);
         }
 
-        public async Task<bool> RegisterUser()
+        // Регистрация пользователя
+        public async Task<bool> RegisterUserAsync()
         {
+            if (string.IsNullOrWhiteSpace(Email) ||
+                string.IsNullOrWhiteSpace(Password) ||
+                string.IsNullOrWhiteSpace(FirstName) ||
+                string.IsNullOrWhiteSpace(LastName) ||
+                string.IsNullOrWhiteSpace(Building) ||
+                string.IsNullOrWhiteSpace(RoomNumber) ||
+                string.IsNullOrWhiteSpace(Language))
+            {
+                ErrorMessage = "All fields are required.";
+                return false;
+            }
+
             var user = new User
             {
                 Email = Email,
@@ -148,66 +112,40 @@ namespace KioskApp.ViewModels
                 PlaceOfBirth = PlaceOfBirth
             };
 
-            if (string.IsNullOrEmpty(user.Email) || string.IsNullOrEmpty(user.Password) || string.IsNullOrEmpty(user.FirstName) || string.IsNullOrEmpty(user.LastName) || string.IsNullOrEmpty(user.Building) || string.IsNullOrEmpty(user.RoomNumber) || string.IsNullOrEmpty(user.Language))
+            var response = await _userService.RegisterAsync(user);
+            if (response.IsSuccess)
             {
-                ErrorMessage = "All fields are required.";
-                return false;
-            }
-
-
-            var registeredResponse = await _userService.Register(user);
-            if (registeredResponse != null && registeredResponse.IsSuccess)
-            {
-                Debug.WriteLine($"Registration User in RegistrationViewModel: {registeredResponse.Data.Email}");
                 await Shell.Current.GoToAsync("..");
                 return true;
             }
-            else
-            {
-                ErrorMessage = registeredResponse?.Message ?? "Registration failed.";
-                return false;
-            }
+
+            ErrorMessage = response.Message;
+            return false;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-
+        // Заполнить PlaceOfBirth через геолокацию
         public async Task SetPlaceOfBirthByGeolocationAsync()
         {
             try
             {
-                // Получаем последнее известное местоположение
-                var location = await Geolocation.GetLastKnownLocationAsync();
-                if (location == null)
+                var loc = await Geolocation.GetLastKnownLocationAsync()
+                          ?? await Geolocation.GetLocationAsync(new GeolocationRequest(GeolocationAccuracy.Medium));
+                if (loc != null)
                 {
-                    // Если последнее известное местоположение недоступно, запрашиваем новое
-                    location = await Geolocation.GetLocationAsync(new GeolocationRequest(GeolocationAccuracy.Medium));
-                }
-                if (location != null)
-                {
-                    // Выполняем обратное геокодирование для получения адреса
-                    var placemarks = await Geocoding.GetPlacemarksAsync(location);
-                    var placemark = placemarks?.FirstOrDefault();
-                    if (placemark != null)
+                    var marks = await Geocoding.GetPlacemarksAsync(loc);
+                    var pm = marks?.FirstOrDefault();
+                    if (pm != null)
                     {
-                        // Формируем читаемое представление адреса
-                        string placeOfBirth = $"{placemark.Locality}, {placemark.AdminArea}, {placemark.CountryName}";
-                        // Например, обновляем соответствующее свойство в модели
-                        // Предполагаем, что у вас есть привязка к CurrentUser в ProfileViewModel
-                        PlaceOfBirth = placeOfBirth;
-                        OnPropertyChanged(nameof(PlaceOfBirth));
+                        PlaceOfBirth = $"{pm.Locality}, {pm.AdminArea}, {pm.CountryName}";
                     }
                 }
             }
             catch (Exception ex)
             {
-                // Обработка ошибок (например, отсутствие разрешений)
-                await Application.Current.MainPage.DisplayAlert("Ошибка", $"Невозможно получить данные геолокации: {ex.Message}", "OK");
+                await Application.Current.MainPage.DisplayAlert(
+                    "Error",
+                    $"Unable to get location: {ex.Message}",
+                    "OK");
             }
         }
     }

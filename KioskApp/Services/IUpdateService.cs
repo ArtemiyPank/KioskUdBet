@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KioskApp.Services
+﻿namespace KioskApp.Services
 {
     public interface IUpdateService
     {
+        // Start listening for status updates of the specified order
         void StartMonitoringOrderStatus(int orderId, Action<string> onStatusUpdate);
+
+        // Stop listening for order status updates
         void StopMonitoringOrderStatus();
     }
 }

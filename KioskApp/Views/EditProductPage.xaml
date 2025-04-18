@@ -6,37 +6,38 @@
              Title="Edit Product"
              BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
 
-    <!-- Устанавливаем BindingContext через ресурс -->
+    <!-- Bind to the EditProductViewModel -->
     <ContentPage.BindingContext>
         <vm:EditProductViewModel />
     </ContentPage.BindingContext>
 
-    <!-- Добавляем ScrollView для адаптивного отображения на разных экранах -->
+    <!-- ScrollView for scrolling on smaller screens -->
     <ScrollView>
         <StackLayout Padding="20"
                      Spacing="20">
-            <!-- Поле ввода Name -->
+
+            <!-- Name field -->
             <Entry Placeholder="Name"
                    Text="{Binding Product.Name}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода Description -->
+            <!-- Description field -->
             <Entry Placeholder="Description"
                    Text="{Binding Product.Description}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода Category -->
+            <!-- Category field -->
             <Entry Placeholder="Category"
                    Text="{Binding Product.Category}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода Price -->
+            <!-- Price field with numeric keyboard -->
             <Entry Placeholder="Price"
                    Text="{Binding Product.Price}"
                    Keyboard="Numeric"
@@ -44,7 +45,7 @@
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода Stock -->
+            <!-- Stock field with numeric keyboard -->
             <Entry Placeholder="Stock"
                    Text="{Binding Product.Stock}"
                    Keyboard="Numeric"
@@ -52,31 +53,32 @@
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Кнопка для выбора изображения -->
+            <!-- Button to choose a new image -->
             <Button Text="Choose Image"
                     Command="{Binding ChooseImageCommand}"
                     BackgroundColor="{DynamicResource ButtonBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16" />
 
-            <!-- Отображение изображения -->
+            <!-- Display selected image -->
             <Image Source="{Binding ImagePath}"
                    HeightRequest="200"
                    WidthRequest="200"
                    Aspect="AspectFit" />
 
-            <!-- Кнопка для обновления продукта -->
+            <!-- Button to submit the updated product -->
             <Button Text="Update Product"
                     Command="{Binding UpdateProductCommand}"
                     BackgroundColor="{DynamicResource ButtonBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16" />
 
-            <!-- Метка для вывода сообщения об ошибке -->
+            <!-- Error message label -->
             <Label Text="{Binding ErrorMessage}"
                    TextColor="{DynamicResource AccentColor}"
                    IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                    FontSize="14" />
+
         </StackLayout>
     </ScrollView>
 </ContentPage>

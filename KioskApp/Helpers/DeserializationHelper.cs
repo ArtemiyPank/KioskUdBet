@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KioskApp.Helpers
+﻿namespace KioskApp.Helpers
 {
+    // Provides a flag to indicate when JSON deserialization is in progress
     public static class DeserializationHelper
     {
-        // Static property to track deserialization state
+        // True while the application is performing deserialization, false otherwise
         public static bool IsDeserializing { get; set; } = false;
     }
-
 }

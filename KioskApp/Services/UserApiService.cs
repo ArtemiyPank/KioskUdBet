@@ -1,22 +1,18 @@
 ﻿using System.Diagnostics;
-using System.Net.Http.Json;
-using KioskApp.Models;
-using System.Text.Json;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
-using System.Globalization;
-using System.Text;
-using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using KioskApp.Helpers;
-using Microsoft.Maui.ApplicationModel.Communication;
+using KioskApp.Models;
 
 namespace KioskApp.Services
 {
+    // Service for calling user-related API endpoints and handling token management
     public class UserApiService : IUserApiService
     {
         private readonly AppState _appState;
         private readonly HttpClient _httpClient;
-
 
         public UserApiService(HttpClient httpClient)
         {
@@ -24,130 +20,76 @@ namespace KioskApp.Services
             _appState = DependencyService.Get<AppState>();
         }
 
-        // Метод для отправки запросов с автоматическим обновлением токенов
-        public async Task<HttpResponseMessage> SendRequestAsync(Func<HttpRequestMessage> createRequest, bool isSseRequest = false)
+        // Send an HTTP request, attaching the bearer token and refreshing it if expired
+        public async Task<HttpResponseMessage> SendRequestAsync(
+            Func<HttpRequestMessage> createRequest,
+            bool isSseRequest = false)
         {
-            //Debug.WriteLine("In SendRequestAsync");
             if (_appState.CurrentUser != null)
             {
-                //Debug.WriteLine(":::::: flag 1 :::::: SendRequestAsync");
-
-                await EnsureAccessToken();
-
-                //Debug.WriteLine(":::::: flag 2 :::::: SendRequestAsync");
-
+                await EnsureAccessTokenAsync();
                 var request = createRequest();
-                
-                //Debug.WriteLine(":::::: flag 3 :::::: SendRequestAsync");
-                
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appState.AccessToken);
-               
-                //Debug.WriteLine(":::::: flag 4 :::::: SendRequestAsync");
+                request.Headers.Authorization =
+                    new AuthenticationHeaderValue("Bearer", _appState.AccessToken);
 
-                if (!isSseRequest) return await _httpClient.SendAsync(request);
-                
-                //Debug.WriteLine(":::::: flag 5 :::::: SendRequestAsync");
-                
-                return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                if (isSseRequest)
+                    return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+                return await _httpClient.SendAsync(request);
             }
 
             return await _httpClient.SendAsync(createRequest());
         }
 
-
-        // Ensure access token is valid and refresh if necessary
-        private async Task EnsureAccessToken()
+        // Refresh the access token if it has expired
+        private async Task EnsureAccessTokenAsync()
         {
             if (IsTokenExpired(_appState.AccessToken))
-            {
-                await RefreshTokens();
-            }
+                await RefreshTokensAsync();
         }
 
-        // Check if the token is expired
+        // Determine whether a JWT has passed its expiry time
         private bool IsTokenExpired(string token)
         {
-            var jwtToken = new JwtSecurityTokenHandler().ReadToken(token) as JwtSecurityToken;
-            return jwtToken.ValidTo < DateTime.UtcNow;
+            var jwt = new JwtSecurityTokenHandler().ReadToken(token) as JwtSecurityToken;
+            return jwt?.ValidTo < DateTime.UtcNow;
         }
 
-
-        // Register a new user and retrieve access and refresh tokens
-        public async Task<AuthResponse> RegisterUser(User user)
+        // Register a new user and parse returned tokens and user data
+        public async Task<AuthResponse> RegisterUserAsync(User user)
         {
             try
             {
                 var response = await SendRequestAsync(() =>
-                {
-                    return new HttpRequestMessage(HttpMethod.Post, "/api/users/register")
+                    new HttpRequestMessage(HttpMethod.Post, "/api/users/register")
                     {
                         Content = JsonContent.Create(user)
-                    };
-                });
+                    });
 
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse>();
-
-                Debug.WriteLine($"result - {result.ToString}");
-                Debug.WriteLine($"result.IsSuccess - {result.IsSuccess}");
-                Debug.WriteLine($"result.Message - {result.Message}");
-
-
-                if (result.IsSuccess)
-                {
-
-                    var accessTokens = response.Headers.GetValues("Access-Token");
-                    var refreshTokens = response.Headers.GetValues("Refresh-Token");
-                    var token = accessTokens.FirstOrDefault();
-                    var refreshToken = refreshTokens.FirstOrDefault();
-
-                    // Serialize the Data to JSON string and then parse it as JsonElement
-                    string userJson = JsonSerializer.Serialize(result.Data);
-                    JsonElement jsonElement = JsonDocument.Parse(userJson).RootElement;
-
-                    // Deserialize JsonElement to User object
-                    var registeredUser = JsonSerializer.Deserialize<User>(jsonElement.GetRawText());
-
-                    //// Fetch or create the last order for the user
-                    //Debug.WriteLine($"Fetching or creating the last order for user with ID: {user.Id}");
-                    //var orderResponse = await SendRequestAsync(() =>
-                    //{
-                    //    return new HttpRequestMessage(HttpMethod.Get, $"/api/order/user/{user.Id}/lastOrder");
-                    //});
-
-                    //// Логируем статус ответа
-                    //Debug.WriteLine($"Order response status: {orderResponse.StatusCode}");
-
-                    //var lastOrder = await orderResponse.Content.ReadFromJsonAsync<Order>();
-
-                    //// Проверяем, что заказ был успешно получен и логируем
-                    //if (lastOrder != null)
-                    //{
-                    //    Debug.WriteLine($"Fetched or created last order with ID: {lastOrder.Id} for user {user.Id}");
-                    //    Preferences.Set("OrderId", lastOrder.Id);
-                    //}
-                    //else
-                    //{
-                    //    Debug.WriteLine($"Failed to fetch or create the last order for user {user.Id}");
-                    //}
-
-
-                    return new AuthResponse
-                    {
-                        IsSuccess = true,
-                        Message = result.Message,
-                        User = registeredUser,
-                        AccessToken = token,
-                        RefreshToken = refreshToken
-                    };
-                }
-                else
+                if (result == null || !result.IsSuccess)
                 {
                     return new AuthResponse
                     {
                         IsSuccess = false,
-                        Message = result.Message
+                        Message = result?.Message ?? "Registration failed"
                     };
                 }
+
+                var accessToken = response.Headers.GetValues("Access-Token").FirstOrDefault();
+                var refreshToken = response.Headers.GetValues("Refresh-Token").FirstOrDefault();
+
+                var userJson = JsonSerializer.Serialize(result.Data);
+                var registeredUser = JsonSerializer.Deserialize<User>(userJson);
+
+                return new AuthResponse
+                {
+                    IsSuccess = true,
+                    Message = result.Message,
+                    User = registeredUser,
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken
+                };
             }
             catch (Exception ex)
             {
@@ -160,92 +102,41 @@ namespace KioskApp.Services
             }
         }
 
-        // Authenticate user using email and password, and retrieve tokens
-        public async Task<AuthResponse> AuthenticateUser(string email, string password)
+        // Authenticate with email and password and retrieve tokens
+        public async Task<AuthResponse> AuthenticateUserAsync(string email, string password)
         {
-            //Debug.WriteLine("In AuthenticateUser");
             try
             {
-                //Debug.WriteLine("--------- flag 1 --------- AuthenticateUser");
                 var response = await SendRequestAsync(() =>
-                {
-                    return new HttpRequestMessage(HttpMethod.Post, "/api/users/authenticate")
+                    new HttpRequestMessage(HttpMethod.Post, "/api/users/authenticate")
                     {
                         Content = JsonContent.Create(new { email, password })
-                    };
-                });
-                //Debug.WriteLine($"response: {response}");
-                //Debug.WriteLine("--------- flag 2 --------- AuthenticateUser");
+                    });
 
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse>();
-                //Debug.WriteLine($"result: {result}");
-
-                //Debug.WriteLine("--------- flag 3 --------- AuthenticateUser");
-
-                if (result.IsSuccess)
-                {
-                    var accessTokens = response.Headers.GetValues("Access-Token");
-                    var refreshTokens = response.Headers.GetValues("Refresh-Token");
-                    var token = accessTokens.FirstOrDefault();
-                    var refreshToken = refreshTokens.FirstOrDefault();
-                    //Debug.WriteLine("--------- flag 4 --------- AuthenticateUser");
-
-                    // Deserialize user data
-                    string userJson = JsonSerializer.Serialize(result.Data);
-                    var user = JsonSerializer.Deserialize<User>(userJson);
-
-                    //Debug.WriteLine("--------- flag 5 --------- AuthenticateUser");
-
-                    // Fetch or create the last order for the user
-                    //Debug.WriteLine($"Fetching or creating the last order for user with ID: {user.Id}");
-                    //var orderResponse = await SendRequestAsync(() =>
-                    //{
-                    //    return new HttpRequestMessage(HttpMethod.Get, $"/api/order/user/{user.Id}/lastOrder");
-                    //});
-                    //Debug.WriteLine("--------- flag 6 --------- AuthenticateUser");
-
-                    // Логируем статус ответа
-                    //Debug.WriteLine($"Order response status: {orderResponse.StatusCode}");
-                    //Debug.WriteLine($"orderResponse: {orderResponse}");
-                    //Debug.WriteLine($"orderResponse.Content: {orderResponse.Content.ToString()}");
-
-                    //string lastOrderJson = JsonSerializer.Serialize(result.Data);
-                    //Debug.WriteLine($"lastOrderJson: {lastOrderJson}");
-
-                    //var lastOrder = JsonSerializer.Deserialize<User>(userJson);
-                    //Debug.WriteLine($"lastOrder: {lastOrder}");
-
-                    //var lastOrder = await orderResponse.Content.ReadFromJsonAsync<Order>();
-
-                    //// Проверяем, что заказ был успешно получен и логируем
-                    //if (lastOrder != null)
-                    //{
-                    //    Debug.WriteLine($"Fetched or created last order with ID: {lastOrder.Id} for user {user.Id}");
-                    //    Preferences.Set("OrderId", lastOrder.Id);
-                    //}
-                    //else
-                    //{
-                    //    Debug.WriteLine($"Failed to fetch or create the last order for user {user.Id}");
-                    //}
-
-
-                    return new AuthResponse
-                    {
-                        IsSuccess = true,
-                        Message = result.Message,
-                        User = user,
-                        AccessToken = token,
-                        RefreshToken = refreshToken
-                    };
-                }
-                else
+                if (result == null || !result.IsSuccess)
                 {
                     return new AuthResponse
                     {
                         IsSuccess = false,
-                        Message = result.Message
+                        Message = result?.Message ?? "Authentication failed"
                     };
                 }
+
+                var accessToken = response.Headers.GetValues("Access-Token").FirstOrDefault();
+                var refreshToken = response.Headers.GetValues("Refresh-Token").FirstOrDefault();
+
+                var userJson = JsonSerializer.Serialize(result.Data);
+                var user = JsonSerializer.Deserialize<User>(userJson);
+
+                return new AuthResponse
+                {
+                    IsSuccess = true,
+                    Message = result.Message,
+                    User = user,
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken
+                };
             }
             catch (Exception ex)
             {
@@ -258,83 +149,46 @@ namespace KioskApp.Services
             }
         }
 
-
-        // Authenticate using refresh token and retrieve new tokens
-        public async Task<AuthResponse> AuthenticateWithToken(string refreshToken)
+        // Authenticate using an existing refresh token and get new tokens
+        public async Task<AuthResponse> AuthenticateWithTokenAsync(string refreshToken)
         {
             try
             {
                 var response = await SendRequestAsync(() =>
                 {
-                    var request = new HttpRequestMessage(HttpMethod.Post, "/api/users/authenticateWithToken");
-                    request.Headers.Add("Refresh-Token", refreshToken);
-                    return request;
+                    var req = new HttpRequestMessage(HttpMethod.Post, "/api/users/authenticateWithToken");
+                    req.Headers.Add("Refresh-Token", refreshToken);
+                    return req;
                 });
 
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse>();
-
-                Debug.WriteLine($"result.Message - {result.Message}");
-
-                if (result.IsSuccess)
-                {
-                    var accessTokens = response.Headers.GetValues("Access-Token");
-                    var refreshTokens = response.Headers.GetValues("Refresh-Token");
-                    var token = accessTokens.FirstOrDefault();
-                    var newRefreshToken = refreshTokens.FirstOrDefault();
-
-                    // Serialize the Data to JSON string and then parse it as JsonElement
-                    string userJson = JsonSerializer.Serialize(result.Data);
-                    JsonElement jsonElement = JsonDocument.Parse(userJson).RootElement;
-
-                    // Deserialize JsonElement to User object
-                    var user = JsonSerializer.Deserialize<User>(jsonElement.GetRawText());
-
-                    //// Fetch or create the last order for the user
-                    //Debug.WriteLine($"Fetching or creating the last order for user with ID: {user.Id}");
-                    //var orderResponse = await SendRequestAsync(() =>
-                    //{
-                    //    return new HttpRequestMessage(HttpMethod.Get, $"/api/order/user/{user.Id}/lastOrder");
-                    //});
-
-                    //// Логируем статус ответа
-                    //Debug.WriteLine($"Order response status: {orderResponse.StatusCode}");
-
-                    //var lastOrder = await orderResponse.Content.ReadFromJsonAsync<Order>();
-
-                    //// Проверяем, что заказ был успешно получен и логируем
-                    //if (lastOrder != null)
-                    //{
-                    //    Debug.WriteLine($"Fetched or created last order with ID: {lastOrder.Id} for user {user.Id}");
-                    //    Preferences.Set("OrderId", lastOrder.Id);
-                    //}
-                    //else
-                    //{
-                    //    Debug.WriteLine($"Failed to fetch or create the last order for user {user.Id}");
-                    //}
-
-
-                    return new AuthResponse
-                    {
-                        IsSuccess = true,
-                        Message = result.Message,
-                        User = user,
-                        AccessToken = token,
-                        RefreshToken = newRefreshToken
-                    };
-                }
-                else
+                if (result == null || !result.IsSuccess)
                 {
                     return new AuthResponse
                     {
                         IsSuccess = false,
-                        Message = result.Message
+                        Message = result?.Message ?? "Token authentication failed"
                     };
                 }
 
+                var accessToken = response.Headers.GetValues("Access-Token").FirstOrDefault();
+                var newRefreshToken = response.Headers.GetValues("Refresh-Token").FirstOrDefault();
+
+                var userJson = JsonSerializer.Serialize(result.Data);
+                var user = JsonSerializer.Deserialize<User>(userJson);
+
+                return new AuthResponse
+                {
+                    IsSuccess = true,
+                    Message = result.Message,
+                    User = user,
+                    AccessToken = accessToken,
+                    RefreshToken = newRefreshToken
+                };
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in AuthenticateWithToken in UserApiService: {ex.Message}");
+                Debug.WriteLine($"Error in AuthenticateWithToken: {ex.Message}");
                 return new AuthResponse
                 {
                     IsSuccess = false,
@@ -343,31 +197,35 @@ namespace KioskApp.Services
             }
         }
 
-        // Clear the authorization header
+        // Remove the Authorization header from the HTTP client
         public void ClearAuthorizationHeader()
         {
             _httpClient.DefaultRequestHeaders.Authorization = null;
-            Debug.WriteLine("Authorization header cleared in ApiService.");
+            Debug.WriteLine("Authorization header cleared.");
         }
 
-        // Refresh access and refresh tokens
-        public async Task RefreshTokens()
+        // Call API to refresh both access and refresh tokens
+        public async Task RefreshTokensAsync()
         {
             try
             {
-                var refreshToken = await SecureStorage.GetAsync("refresh_token");
-                var response = await _httpClient.PostAsJsonAsync("/api/users/refresh", new { Token = _appState.AccessToken, RefreshToken = refreshToken });
-                if (response.Headers.TryGetValues("Access-Token", out var newAccessTokens) &&
-                    response.Headers.TryGetValues("Refresh-Token", out var newRefreshTokens))
+                var storedRefresh = await SecureStorage.GetAsync("refresh_token");
+                var response = await _httpClient.PostAsJsonAsync("/api/users/refresh", new
                 {
-                    _appState.AccessToken = newAccessTokens.FirstOrDefault();
+                    Token = _appState.AccessToken,
+                    RefreshToken = storedRefresh
+                });
 
-                    await SecureStorage.SetAsync("auth_token", newAccessTokens.FirstOrDefault());
-                    await SecureStorage.SetAsync("refresh_token", newRefreshTokens.FirstOrDefault());
+                if (response.Headers.TryGetValues("Access-Token", out var newAccess) &&
+                    response.Headers.TryGetValues("Refresh-Token", out var newRefresh))
+                {
+                    _appState.AccessToken = newAccess.FirstOrDefault();
+                    await SecureStorage.SetAsync("auth_token", newAccess.FirstOrDefault());
+                    await SecureStorage.SetAsync("refresh_token", newRefresh.FirstOrDefault());
                 }
                 else
                 {
-                    throw new Exception("Failed to retrieve tokens");
+                    throw new Exception("Token refresh response missing headers");
                 }
             }
             catch (Exception ex)
@@ -376,7 +234,5 @@ namespace KioskApp.Services
                 throw;
             }
         }
-
     }
 }
-

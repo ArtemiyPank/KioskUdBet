@@ -1,76 +1,90 @@
 ﻿namespace KioskAPI.Models
 {
-
+    // Request DTO for reserving or releasing product quantities
     public class QuantityRequest
     {
+        // ID of the product to adjust
         public int ProductId { get; set; }
+
+        // Quantity to reserve or release
         public int Quantity { get; set; }
 
-
-        public override string ToString()
-        {
-            string rez = $"ProductId - {ProductId} \n" +
-                         $"Quantity - {Quantity}";
-            return rez;
-        }
+        // Return a simple string representation
+        public override string ToString() =>
+            $"ProductId: {ProductId}, Quantity: {Quantity}";
     }
 
-
+    // Represents a product in the kiosk inventory
     public class Product
     {
+        // Primary key
         public int Id { get; set; }
+
+        // Product name
         public string Name { get; set; }
+
+        // Product description
         public string Description { get; set; }
+
+        // Category name for grouping
         public string Category { get; set; }
+
+        // Price per unit
         public decimal Price { get; set; }
 
-        public int Stock { get; set; } // Общее количество товара
-        public int ReservedStock { get; set; } // Зарезервированное количество
-        public int AvailableStock => Stock - ReservedStock; // Доступное количество
+        // Total stock available in inventory
+        public int Stock { get; set; }
 
+        // Quantity currently reserved by orders
+        public int ReservedStock { get; set; }
+
+        // Stock available for new orders
+        public int AvailableStock => Stock - ReservedStock;
+
+        // URL to the product image
         public string ImageUrl { get; set; }
 
+        // Whether the product is hidden from listings
         public bool IsHidden { get; set; } = false;
+
+        // Timestamp of the last update
         public DateTime LastUpdated { get; set; }
 
-        // Метод для резервирования товара
+        // Reserve a given quantity, reducing available stock
         public void ReserveStock(int quantity)
         {
-            if (AvailableStock >= quantity)
-            {
-                ReservedStock += quantity;
-            }
-            else
-            {
-                throw new Exception("Not enough stock available");
-            }
+            if (quantity <= 0)
+                throw new ArgumentException("Quantity must be positive", nameof(quantity));
+
+            if (AvailableStock < quantity)
+                throw new InvalidOperationException("Not enough stock available");
+
+            ReservedStock += quantity;
         }
 
-        // Метод для освобождения товара
+        // Release a previously reserved quantity
         public void ReleaseStock(int quantity)
         {
-            if (ReservedStock >= quantity)
-            {
-                ReservedStock -= quantity;
-            }
-            else
-            {
-                throw new Exception("Invalid release quantity");
-            }
+            if (quantity <= 0)
+                throw new ArgumentException("Quantity must be positive", nameof(quantity));
+
+            if (ReservedStock < quantity)
+                throw new InvalidOperationException("Cannot release more than reserved");
+
+            ReservedStock -= quantity;
         }
 
-        // Метод для обновления количества товара после оформления заказа
+        // Confirm an order by deducting stock and reserved quantities
         public void ConfirmOrder(int quantity)
         {
-            if (ReservedStock >= quantity)
-            {
-                Stock -= quantity; // Уменьшаем общее количество товара на складе
-                ReservedStock -= quantity; // Уменьшаем зарезервированное количество
-            }
-            else
-            {
-                throw new Exception("Insufficient reserved stock to confirm the order");
-            }
+            if (quantity <= 0)
+                throw new ArgumentException("Quantity must be positive", nameof(quantity));
+
+            if (ReservedStock < quantity)
+                throw new InvalidOperationException("Insufficient reserved stock to confirm order");
+
+            Stock -= quantity;
+            ReservedStock -= quantity;
         }
     }
 }

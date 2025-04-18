@@ -4,11 +4,13 @@
              x:Class="KioskApp.Views.LoginPage"
              Title="Login"
              BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
-    <!-- Оборачиваем содержимое в ScrollView для поддержки адаптивности -->
+
+    <!-- Enable scrolling for smaller screens -->
     <ScrollView>
         <StackLayout Padding="20"
                      Spacing="20">
-            <!-- Заголовок страницы -->
+
+            <!-- Page title -->
             <Label Text="Login"
                    FontSize="28"
                    FontAttributes="Bold"
@@ -16,47 +18,48 @@
                    HorizontalOptions="Center"
                    Margin="0,10,0,20" />
 
-            <!-- Поле ввода Email с тёмным фоном -->
-            <Entry Text="{Binding Email}"
-                   x:Name="emailEntry"
+            <!-- Email input field -->
+            <Entry x:Name="emailEntry"
                    Placeholder="Email"
+                   Text="{Binding Email}"
                    Keyboard="Email"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода Password с тёмным фоном -->
-            <Entry Text="{Binding Password}"
-                   x:Name="passwordEntry"
+            <!-- Password input field -->
+            <Entry x:Name="passwordEntry"
                    Placeholder="Password"
+                   Text="{Binding Password}"
                    IsPassword="True"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- CheckBox для показа/скрытия пароля -->
+            <!-- Checkbox to toggle password visibility -->
             <CheckBox x:Name="showPasswordCheckBox"
                       CheckedChanged="OnShowPasswordCheckedChanged" />
 
-            <!-- Кнопка для входа -->
+            <!-- Button to submit login -->
             <Button Text="Login"
                     Clicked="OnLoginClicked"
                     BackgroundColor="{DynamicResource ButtonBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16" />
 
-            <!-- Кнопка для перехода к регистрации -->
+            <!-- Button to navigate to registration page -->
             <Button Text="Register"
                     Command="{Binding NavigateToRegisterCommand}"
                     BackgroundColor="{DynamicResource ButtonBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16" />
 
-            <!-- Метка для вывода сообщения об ошибке -->
+            <!-- Error message display -->
             <Label Text="{Binding ErrorMessage}"
                    TextColor="{DynamicResource AccentColor}"
-                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBooleanConverter}}"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                    FontSize="14" />
+
         </StackLayout>
     </ScrollView>
 </ContentPage>

@@ -1,24 +1,18 @@
 ﻿using KioskApp.Services;
 using KioskApp.ViewModels;
-using Microsoft.Maui.Controls;
-using System.Diagnostics;
 
 namespace KioskApp.Views
 {
+    // Code-behind for the OrdersPage XAML view
     public partial class OrdersPage : ContentPage
     {
+
+        // Constructor initializes UI components; ViewModel is bound in XAML
         public OrdersPage(IOrderApiService orderApiService)
         {
-            try
-            {
-                InitializeComponent();
-                BindingContext = new OrdersViewModel(orderApiService);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error in OrdersPage constructor: {ex.Message}");
-                // Handle error appropriately, perhaps show an alert
-            }
+            InitializeComponent();
+            BindingContext = new OrdersViewModel(orderApiService);
+
         }
     }
 }

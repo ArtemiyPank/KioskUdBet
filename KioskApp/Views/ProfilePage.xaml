@@ -1,19 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="KioskApp.Views.ProfilePage"
              Title="Profile">
-    <!-- Основной контейнер с прокруткой для удобства на разных устройствах -->
+
+    <!-- ScrollView ensures content scrolls on smaller screens -->
     <ScrollView>
         <StackLayout Padding="20"
                      Spacing="20">
-            <!-- Заголовок страницы -->
+
+            <!-- Page title -->
             <Label Text="Profile"
                    FontSize="28"
                    FontAttributes="Bold"
                    HorizontalOptions="Center"
                    Margin="0,10,0,20" />
 
-            <!-- Блок отображения информации для аутентифицированных пользователей -->
+            <!-- Display user details when authenticated -->
             <StackLayout IsVisible="{Binding IsAuthenticated}"
                          Spacing="10">
                 <Label Text="{Binding CurrentUser.Email, StringFormat='Email: {0}'}"
@@ -24,22 +27,23 @@
                        FontSize="16" />
                 <Label Text="{Binding CurrentUser.Building, StringFormat='Building: {0}'}"
                        FontSize="16" />
-                <Label Text="{Binding CurrentUser.RoomNumber, StringFormat='Room number: {0}'}"
+                <Label Text="{Binding CurrentUser.RoomNumber, StringFormat='Room Number: {0}'}"
                        FontSize="16" />
                 <Label Text="{Binding CurrentUser.Language, StringFormat='Language: {0}'}"
                        FontSize="16" />
                 <HorizontalStackLayout>
-                    <Label Text="Place of birthday: "
+                    <Label Text="Place of Birth:"
                            FontSize="16" />
-                    <Label Text="{Binding CurrentUser.PlaceOfBirth, Mode=TwoWay, StringFormat='{0}'}"
-                       FontSize="16" />
+                    <Label Text="{Binding CurrentUser.PlaceOfBirth}"
+                           FontSize="16" />
                 </HorizontalStackLayout>
+                <!-- Logout button -->
                 <Button Text="Logout"
                         Command="{Binding LogoutCommand}"
                         FontSize="16" />
             </StackLayout>
 
-            <!-- Блок отображения кнопок, когда пользователь не аутентифицирован -->
+            <!-- Show login/register when not authenticated -->
             <StackLayout IsVisible="{Binding IsNotAuthenticated}"
                          Spacing="10">
                 <Button Text="Login"
@@ -49,6 +53,7 @@
                         Command="{Binding NavigateToRegisterCommand}"
                         FontSize="16" />
             </StackLayout>
+
         </StackLayout>
     </ScrollView>
 </ContentPage>

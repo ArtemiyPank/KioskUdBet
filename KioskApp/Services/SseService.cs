@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
 namespace KioskApp.Services
 {
@@ -19,172 +13,79 @@ namespace KioskApp.Services
             _httpClient = httpClient;
         }
 
-        //// Подключение к SSE для отслеживания статуса заказа
-        //public Task StartMonitoringOrderStatus(int orderId, Action<string> onStatusUpdate, CancellationToken cancellationToken)
-        //{
-        //    // Выполнение метода на фоновом потоке
-        //    return Task.Run(async () =>
-        //    {
-        //        await StartOrderStatusSseAsync(orderId, status =>
-        //        {
-        //            // Здесь вы обновляете UI, поэтому убедитесь, что это делается на главном потоке
-        //            MainThread.BeginInvokeOnMainThread(() =>
-        //            {
-        //                // Обновляем UI
-        //                onStatusUpdate(status);
-        //                Debug.WriteLine($"Order Status: {status}");
-        //            });
-        //        }, cancellationToken);
-        //    });
-        //}
-
-
-        //public async Task StartOrderStatusSseAsync(int orderId, Action<string> onStatusUpdate, CancellationToken cancellationToken)
-        //{
-        //    try
-        //    {
-        //        Debug.WriteLine("Before SendRequestAsync");
-        //        var response = await _userApiService.SendRequestAsync(() =>
-        //        {
-        //            return new HttpRequestMessage(HttpMethod.Get, $"/api/sse/orders/{orderId}");
-        //        }, true);
-
-        //        Debug.WriteLine("After GetAsync");
-        //        Debug.WriteLine($"response - {response}");
-
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            using (var stream = await response.Content.ReadAsStreamAsync())
-        //            {
-        //                using (var reader = new StreamReader(stream))
-        //                {
-        //                    while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
-        //                    {
-        //                        var message = await reader.ReadLineAsync();
-        //                        Debug.WriteLine($"Received message: {message}");
-        //                        if (!string.IsNullOrEmpty(message))
-        //                        {
-        //                            // Убираем префикс "data:" из сообщения
-        //                            if (message.StartsWith("data:"))
-        //                            {
-        //                                message = message.Substring("data:".Length).Trim();
-        //                            }
-
-        //                            Debug.WriteLine("Before onStatusUpdate(message)");
-        //                            onStatusUpdate(message);
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
-        //        else
-        //        {
-        //            Debug.WriteLine($"Request failed with status code: {response.StatusCode}");
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Debug.WriteLine($"Error in StartOrderStatusSseAsync: {ex.Message}");
-        //    }
-        //}
-
-
-
-        // Подключение к SSE для отслеживания количества всех товаров
-        public Task StartMonitoringAllProductsStock(Action<int, int, int> onQuantityUpdate, CancellationToken cancellationToken)
+        // Starts monitoring stock updates for all products via SSE
+        public Task StartMonitoringAllProductsStockAsync(
+            Action<int, int, int> onQuantityUpdate,
+            CancellationToken cancellationToken)
         {
             return Task.Run(async () =>
             {
-                await StartAllProductsStockSseAsync((productId, stock, reservedQuantity) =>
+                await StartAllProductsStockSseAsync((productId, stock, reserved) =>
                 {
-                    // Обновление UI на главном потоке
+                    // Update UI on the main thread
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
-                        onQuantityUpdate(productId, stock, reservedQuantity);
+                        onQuantityUpdate(productId, stock, reserved);
                     });
                 }, cancellationToken);
             });
         }
 
-        public async Task StartAllProductsStockSseAsync(Action<int, int, int> onQuantityUpdate, CancellationToken cancellationToken)
+        // Connects to the SSE endpoint and parses stock update events
+        public async Task StartAllProductsStockSseAsync(
+            Action<int, int, int> onQuantityUpdate,
+            CancellationToken cancellationToken)
         {
             try
             {
-                Debug.WriteLine("Before SSE request in all products stock monitor");
+                Debug.WriteLine("Initiating SSE connection for product stock");
 
-                var response = await _userApiService.SendRequestAsync(() =>
+                var response = await _userApiService.SendRequestAsync(
+                    () => new HttpRequestMessage(HttpMethod.Get, "/api/sse/products/monitor"),
+                    isSseRequest: true);
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    return new HttpRequestMessage(HttpMethod.Get, "/api/sse/products/monitor");
-                }, true);
-
-                Debug.WriteLine("After SSE request in all products stock monitor");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    {
-                        using (var reader = new StreamReader(stream))
-                        {
-                            while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
-                            {
-                                var message = await reader.ReadLineAsync();
-
-                                if (!string.IsNullOrEmpty(message))
-                                {
-                                    // Убираем префикс "data:" из сообщения
-                                    if (message.StartsWith("data:"))
-                                    {
-                                        message = message.Substring("data:".Length).Trim();
-                                    }
-
-                                    Debug.WriteLine($"Received message: {message}");
-
-                                    // Разбираем сообщение в формате productId:stock:reservedQuantity
-                                    var parts = message.Split(':');
-                                    if (parts.Length == 3)
-                                    {
-                                        if (Int32.TryParse(parts[0], out var productId) &&
-                                            Int32.TryParse(parts[1], out var stock) &&
-                                            Int32.TryParse(parts[2], out var reservedQuantity))
-                                        {
-                                            Debug.WriteLine($"Product ID: {productId}, Stock: {stock}, Reserved Quantity: {reservedQuantity}");
-                                            onQuantityUpdate(productId, stock, reservedQuantity);
-                                        }
-                                        else
-                                        {
-                                            Debug.WriteLine($"Failed to parse productId, stock or reservedQuantity from message: {message}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Debug.WriteLine($"Invalid message format received: {message}");
-                                    }
-                                }
-                                else
-                                {
-                                    Debug.WriteLine("Received empty message.");
-                                }
-                            }
-                        }
-                    }
+                    Debug.WriteLine($"SSE endpoint returned {response.StatusCode}");
+                    return;
                 }
-                else
+
+                using var stream = await response.Content.ReadAsStreamAsync();
+                using var reader = new StreamReader(stream);
+
+                while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
                 {
-                    Debug.WriteLine($"SSE request failed with status code: {response.StatusCode}");
+                    var line = await reader.ReadLineAsync();
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    // Remove "data:" prefix if present
+                    if (line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                        line = line.Substring(5).Trim();
+
+                    Debug.WriteLine($"SSE data received: {line}");
+                    var parts = line.Split(':');
+                    if (parts.Length != 3) continue;
+
+                    if (int.TryParse(parts[0], out var id) &&
+                        int.TryParse(parts[1], out var stock) &&
+                        int.TryParse(parts[2], out var reserved))
+                    {
+                        onQuantityUpdate(id, stock, reserved);
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Malformed SSE data: {line}");
+                    }
                 }
             }
             catch (TaskCanceledException)
             {
-                Debug.WriteLine("SSE monitoring was cancelled.");
+                Debug.WriteLine("SSE monitoring cancelled by token");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in SSE monitoring for all products: {ex.Message}");
+                Debug.WriteLine($"Error during SSE monitoring: {ex.Message}");
             }
         }
-
-
-
-
     }
 }

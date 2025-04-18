@@ -1,28 +1,30 @@
 ﻿using KioskApp.ViewModels;
-using Microsoft.Maui.Controls;
 
 namespace KioskApp.Views
 {
+    // Code‑behind for the RegisterPage XAML view
     public partial class RegisterPage : ContentPage
     {
+        // Initialize components and set the ViewModel
         public RegisterPage()
         {
             InitializeComponent();
             BindingContext = new RegisterViewModel();
         }
 
+        // Toggle the visibility of the password field
         private void OnShowPasswordCheckedChanged(object sender, CheckedChangedEventArgs e)
         {
             passwordEntry.IsPassword = !e.Value;
         }
 
+        // Handle the Register button click
         private async void OnRegisterClicked(object sender, EventArgs e)
         {
-            var viewModel = BindingContext as RegisterViewModel;
-            if (viewModel != null)
+            if (BindingContext is RegisterViewModel viewModel)
             {
-                var result = await viewModel.RegisterUser();
-                if (result)
+                bool isRegistered = await viewModel.RegisterUserAsync();
+                if (isRegistered)
                 {
                     await DisplayAlert("Success", "Registration successful", "OK");
                 }

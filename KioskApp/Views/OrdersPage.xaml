@@ -6,18 +6,19 @@
              Title="Orders"
              BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
 
-    <!-- Обновлённые локальные стили для заголовков и деталей -->
     <ContentPage.Resources>
+        <!-- Header labels (e.g. section titles) -->
         <Style x:Key="HeaderLabelStyle"
                TargetType="Label">
             <Setter Property="FontSize"
                     Value="14" />
             <Setter Property="FontAttributes"
                     Value="Bold" />
-            <!-- Используем динамический ресурс для текста -->
             <Setter Property="TextColor"
                     Value="{DynamicResource PrimaryTextColor}" />
         </Style>
+
+        <!-- Detail labels (e.g. field values) -->
         <Style x:Key="DetailLabelStyle"
                TargetType="Label">
             <Setter Property="FontSize"
@@ -27,127 +28,130 @@
         </Style>
     </ContentPage.Resources>
 
-    <StackLayout Padding="10">
-        <!-- Кнопка для ручной перезагрузки заказов -->
+    <StackLayout Padding="10"
+                 Spacing="10">
+
+        <!-- Button to manually reload orders -->
         <Button Text="Reload Orders"
                 Command="{Binding ReloadOrdersCommand}"
-                Margin="0,10,0,0"
                 BackgroundColor="{DynamicResource ButtonBackgroundColor}"
                 TextColor="{DynamicResource PrimaryTextColor}" />
 
-        <!-- ListView для отображения всех заказов -->
-        <ListView ItemsSource="{Binding Orders}"
-                  HasUnevenRows="True"
-                  SeparatorVisibility="None"
-                  BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
-            <ListView.ItemTemplate>
+        <!-- List of active orders -->
+        <CollectionView ItemsSource="{Binding Orders}"
+                        BackgroundColor="{DynamicResource PrimaryBackgroundColor}"
+                        Margin="0,10,0,0"
+                        VerticalOptions="FillAndExpand">
+
+            <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <ViewCell>
-                        <Frame HasShadow="False"
-                               Padding="5"
-                               Margin="2"
-                               BorderColor="{DynamicResource AccentColor}"
-                               BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
-                               CornerRadius="8">
-                            <StackLayout Spacing="8">
-                                <!-- Заголовок заказа с основными данными -->
-                                <Grid ColumnSpacing="5">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <!-- Информация о заказе -->
-                                    <Label Text="Order Details"
-                                           Style="{StaticResource HeaderLabelStyle}"
-                                           Grid.Row="0"
-                                           Grid.Column="0" />
-                                    
-                                    <Label Text="{Binding Status}"
-                                           Style="{StaticResource DetailLabelStyle}"
-                                           TextColor="DarkBlue"
-                                           Grid.Row="0"
-                                           Grid.Column="1"
-                                           HorizontalTextAlignment="End" />
-                                    
-                                    <Label Text="{Binding User.FullName}"
-                                           Grid.Row="1"
-                                           Grid.Column="0" />
+                    <Frame Padding="10"
+                           Margin="0,5"
+                           BorderColor="{DynamicResource AccentColor}"
+                           BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                           CornerRadius="8">
+                        <StackLayout Spacing="8">
 
-                                    <Label Text="{Binding Building}"
-                                           Style="{StaticResource DetailLabelStyle}"
-                                           Grid.Row="1"
-                                           Grid.Column="1"
-                                           HorizontalTextAlignment="End" />
-                                </Grid>
+                            <!-- Order header: status and customer -->
+                            <Grid ColumnSpacing="5"
+                                  RowSpacing="2">
 
-                                <!-- Информация о доставке и номере комнаты -->
-                                <Grid ColumnSpacing="5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <Label Text="{Binding DeliveryStartTime, StringFormat='Delivery: {0:HH:mm} - {1:HH:mm}'}"
-                                           Style="{StaticResource DetailLabelStyle}"
-                                           Grid.Column="0" />
-                                    <Label Text="{Binding RoomNumber}"
-                                           Style="{StaticResource DetailLabelStyle}"
-                                           Grid.Column="1"
-                                           HorizontalTextAlignment="End" />
-                                </Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
 
-                                <!-- Заголовок для списка товаров заказа -->
-                                <Label Text="Order Items:"
-                                       Style="{StaticResource HeaderLabelStyle}" />
+                                <Label Text="Order Details"
+                                       Style="{StaticResource HeaderLabelStyle}"
+                                       Grid.Row="0"
+                                       Grid.Column="0" />
 
-                                <!-- Коллекция для отображения товаров заказа в виде сетки -->
-                                <CollectionView ItemsSource="{Binding OrderItems}">
-                                    <CollectionView.ItemsLayout>
-                                        <GridItemsLayout Orientation="Vertical"
-                                                         Span="2" />
-                                    </CollectionView.ItemsLayout>
-                                    <CollectionView.ItemTemplate>
-                                        <DataTemplate>
-                                            <Frame HasShadow="False"
-                                                   Padding="5"
-                                                   Margin="2"
-                                                   BorderColor="{DynamicResource AccentColor}"
-                                                   BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
-                                                   CornerRadius="5">
-                                                <StackLayout Spacing="2">
-                                                    <!-- Название продукта -->
-                                                    <Label Text="{Binding Product.Name}"
-                                                           Style="{StaticResource DetailLabelStyle}"
-                                                           LineBreakMode="TailTruncation" />
-                                                    <!-- Количество товара -->
-                                                    <Label Text="{Binding Quantity, StringFormat='Qty: {0}'}"
-                                                           Style="{StaticResource DetailLabelStyle}" />
-                                                    <!-- Цена продукта -->
-                                                    <Label Text="{Binding Product.Price, StringFormat='Price: {0:C}'}"
-                                                           Style="{StaticResource DetailLabelStyle}" />
-                                                </StackLayout>
-                                            </Frame>
-                                        </DataTemplate>
-                                    </CollectionView.ItemTemplate>
-                                </CollectionView>
+                                <Label Text="{Binding Status}"
+                                       Style="{StaticResource DetailLabelStyle}"
+                                       TextColor="DarkBlue"
+                                       Grid.Row="0"
+                                       Grid.Column="1"
+                                       HorizontalTextAlignment="End" />
 
-                                <!-- Кнопка обновления статуса заказа -->
-                                <Button Text="Update Status"
-                                        FontSize="12"
-                                        Padding="5"
-                                        Command="{Binding UpdateOrderStatusCommand, Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}}"
-                                        CommandParameter="{Binding .}"
-                                        HorizontalOptions="End"
-                                        BackgroundColor="{DynamicResource ButtonBackgroundColor}"
-                                        TextColor="{DynamicResource PrimaryTextColor}" />
-                            </StackLayout>
-                        </Frame>
-                    </ViewCell>
+                                <Label Text="{Binding User.FullName}"
+                                       Style="{StaticResource DetailLabelStyle}"
+                                       Grid.Row="1"
+                                       Grid.Column="0" />
+
+                                <Label Text="{Binding Building}"
+                                       Style="{StaticResource DetailLabelStyle}"
+                                       Grid.Row="1"
+                                       Grid.Column="1"
+                                       HorizontalTextAlignment="End" />
+                            </Grid>
+
+                            <!-- Delivery time and room number -->
+                            <Grid ColumnSpacing="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Label Text="{Binding DeliveryStartTime, StringFormat='Delivery: {0:HH:mm} - {1:HH:mm}'}"
+                                       Style="{StaticResource DetailLabelStyle}"
+                                       Grid.Column="0" />
+
+                                <Label Text="{Binding RoomNumber}"
+                                       Style="{StaticResource DetailLabelStyle}"
+                                       Grid.Column="1"
+                                       HorizontalTextAlignment="End" />
+                            </Grid>
+
+                            <!-- List of items in this order -->
+                            <Label Text="Order Items:"
+                                   Style="{StaticResource HeaderLabelStyle}" />
+
+                            <CollectionView ItemsSource="{Binding OrderItems}">
+                                <CollectionView.ItemsLayout>
+                                    <!-- Two columns for item grid -->
+                                    <GridItemsLayout Orientation="Vertical"
+                                                     Span="2" />
+                                </CollectionView.ItemsLayout>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Frame Padding="5"
+                                               Margin="2"
+                                               BorderColor="{DynamicResource AccentColor}"
+                                               BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
+                                               CornerRadius="5">
+                                            <StackLayout Spacing="2">
+                                                <Label Text="{Binding Product.Name}"
+                                                       Style="{StaticResource DetailLabelStyle}"
+                                                       LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding Quantity, StringFormat='Qty: {0}'}"
+                                                       Style="{StaticResource DetailLabelStyle}" />
+                                                <Label Text="{Binding Product.Price, StringFormat='Price: {0:C}'}"
+                                                       Style="{StaticResource DetailLabelStyle}" />
+                                            </StackLayout>
+                                        </Frame>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+
+                            <!-- Button to advance order status -->
+                            <Button Text="Update Status"
+                                    FontSize="12"
+                                    Padding="5"
+                                    Command="{Binding UpdateOrderStatusCommand, Source={RelativeSource AncestorType={x:Type vm:OrdersViewModel}}}"
+                                    CommandParameter="{Binding .}"
+                                    HorizontalOptions="End"
+                                    BackgroundColor="{DynamicResource ButtonBackgroundColor}"
+                                    TextColor="{DynamicResource PrimaryTextColor}" />
+
+                        </StackLayout>
+                    </Frame>
                 </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
     </StackLayout>
 </ContentPage>

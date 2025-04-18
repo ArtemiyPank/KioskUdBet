@@ -1,12 +1,6 @@
-﻿using KioskAPI.Controllers;
-using KioskAPI.Data;
+﻿using KioskAPI.Data;
 using KioskAPI.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace KioskAPI.Services
 {
@@ -15,60 +9,65 @@ namespace KioskAPI.Services
         private readonly ApplicationDbContext _context;
         private readonly ILogger<ProductService> _logger;
 
-        public ProductService(ApplicationDbContext context, ILogger<ProductService> logger)
+        public ProductService(
+            ApplicationDbContext context,
+            ILogger<ProductService> logger)
         {
             _context = context;
             _logger = logger;
         }
 
-        public async Task<List<Product>> GetProducts()
+        // GET: retrieve all products
+        public async Task<List<Product>> GetProductsAsync()
         {
+            _logger.LogInformation("Retrieving all products");
             return await _context.Products.ToListAsync();
         }
 
-        public async Task<Product> AddProduct(Product product)
+        // POST: add a new product
+        public async Task<Product> AddProductAsync(Product product)
         {
+            _logger.LogInformation("Adding product {Name}", product.Name);
+
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Product {Id} created", product.Id);
             return product;
         }
 
-        public async Task<Product> GetProductByIdAsync(int productId)
+        // GET: retrieve a product by its ID
+        public async Task<Product?> GetProductByIdAsync(int productId)
         {
+            _logger.LogInformation("Fetching product {ProductId}", productId);
             return await _context.Products.FindAsync(productId);
         }
 
-        public async Task<Product> UpdateProduct(int id, Product product)
+        // PUT: update an existing product
+        public async Task<Product> UpdateProductAsync(int id, Product product)
         {
+            _logger.LogInformation("Updating product {ProductId}", id);
+
             _context.Entry(product).State = EntityState.Modified;
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Product {ProductId} updated", id);
             return product;
         }
 
-        public async Task<bool> ToggleVisibility(int productId)
-        {
-            var product = await _context.Products.FindAsync(productId);
-            if (product == null)
-            {
-                return false;
-            }
-
-            product.IsHidden = !product.IsHidden;
-            _context.Products.Update(product);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
+        // DELETE: remove a product by its ID, including its image file
         public async Task<bool> DeleteProductAsync(int productId)
         {
+            _logger.LogInformation("Deleting product {ProductId}", productId);
+
             var product = await _context.Products.FindAsync(productId);
             if (product == null)
             {
-                _logger.LogWarning($"Product with ID {productId} not found.");
+                _logger.LogWarning("Product {ProductId} not found", productId);
                 return false;
             }
 
-            // Удаление изображения
+            // Delete image file if present
             if (!string.IsNullOrEmpty(product.ImageUrl))
             {
                 var imagePath = Path.Combine("wwwroot", product.ImageUrl.TrimStart('/'));
@@ -77,91 +76,127 @@ namespace KioskAPI.Services
                     try
                     {
                         File.Delete(imagePath);
-                        _logger.LogInformation($"Image {imagePath} deleted successfully.");
+                        _logger.LogInformation("Deleted image at {Path}", imagePath);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError($"Error when deleting an image: {ex.Message}");
-                        throw new IOException($"Failed to delete image at {imagePath}", ex);
+                        _logger.LogError(ex, "Failed to delete image at {Path}", imagePath);
+                        throw;
                     }
                 }
                 else
                 {
-                    _logger.LogWarning($"Image file not found at path: {imagePath}");
+                    _logger.LogWarning("Image file not found at {Path}", imagePath);
                 }
             }
 
-            try
-            {
-                _context.Products.Remove(product);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation($"Product with ID {productId} deleted successfully.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error when deleting product with ID {productId}: {ex.Message}");
-                throw new Exception($"Failed to delete product with ID {productId}", ex);
-            }
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Product {ProductId} removed from database", productId);
+            return true;
         }
 
-        // Резервирование товара
+        // PUT: toggle product visibility flag
+        public async Task<bool> ToggleVisibilityAsync(int id)
+        {
+            _logger.LogInformation("Toggling visibility for product {ProductId}", id);
+
+            var product = await _context.Products.FindAsync(id);
+            if (product == null)
+            {
+                _logger.LogWarning("Product {ProductId} not found", id);
+                return false;
+            }
+
+            product.IsHidden = !product.IsHidden;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Product {ProductId} visibility set to {IsHidden}",
+                id, product.IsHidden);
+
+            return true;
+        }
+
+        // POST: reserve stock for a product and return updated available stock
         public async Task<int> ReserveProductStockAsync(int productId, int quantity)
         {
-            var product = await _context.Products.FindAsync(productId);
-            if (product == null) throw new Exception("Product not found");
+            _logger.LogInformation(
+                "Reserving {Quantity} units of product {ProductId}",
+                quantity, productId);
 
-            product.ReserveStock(quantity); // Резервируем товар
+            var product = await GetProductByIdAsync(productId)
+                ?? throw new KeyNotFoundException("Product not found");
+
+            product.ReserveStock(quantity);
             await _context.SaveChangesAsync();
-            return product.AvailableStock; // Возвращаем доступное количество
+
+            _logger.LogInformation(
+                "Reserved {Quantity} units; available stock: {Available}",
+                quantity, product.AvailableStock);
+
+            return product.AvailableStock;
         }
 
-        // Освобождение товара
+        // POST: release previously reserved stock and return updated available stock
         public async Task<int> ReleaseProductStockAsync(int productId, int quantity)
         {
-            var product = await _context.Products.FindAsync(productId);
-            if (product == null) throw new Exception("Product not found");
+            _logger.LogInformation(
+                "Releasing {Quantity} units of reserved stock for product {ProductId}",
+                quantity, productId);
 
-            product.ReleaseStock(quantity); // Освобождаем товар
+            var product = await GetProductByIdAsync(productId)
+                ?? throw new KeyNotFoundException("Product not found");
+
+            product.ReleaseStock(quantity);
             await _context.SaveChangesAsync();
-            return product.AvailableStock; // Возвращаем доступное количество
+
+            _logger.LogInformation(
+                "Released {Quantity} units; available stock: {Available}",
+                quantity, product.AvailableStock);
+
+            return product.AvailableStock;
         }
 
-        // Получение доступного количества товара
-        public async Task<int> GetStock(int productId)
+        // GET: get total stock level for a product
+        public async Task<int> GetStockAsync(int productId)
         {
-            var product = await _context.Products.FindAsync(productId);
-            if (product == null) throw new Exception("Product not found");
+            _logger.LogInformation("Getting total stock for product {ProductId}", productId);
+
+            var product = await GetProductByIdAsync(productId)
+                ?? throw new KeyNotFoundException("Product not found");
 
             return product.Stock;
         }
 
-        // Получение зарезервированного количества товара
-        public async Task<int> GetReservedStock(int productId)
+        // GET: get reserved stock level for a product
+        public async Task<int> GetReservedStockAsync(int productId)
         {
-            var product = await _context.Products.FindAsync(productId);
-            if (product == null) throw new Exception("Product not found");
+            _logger.LogInformation("Getting reserved stock for product {ProductId}", productId);
+
+            var product = await GetProductByIdAsync(productId)
+                ?? throw new KeyNotFoundException("Product not found");
 
             return product.ReservedStock;
         }
 
-        // Подтверждение заказа при доставке
+        // POST: confirm an order delivery by deducting from stock
         public async Task ConfirmOrderAsync(int productId, int quantity)
         {
-            var product = await _context.Products.FindAsync(productId);
-            if (product == null) throw new Exception("Product not found");
+            _logger.LogInformation(
+                "Confirming delivery of {Quantity} units for product {ProductId}",
+                quantity, productId);
 
-            product.ConfirmOrder(quantity); // Обновляем количество на складе
-            await _context.SaveChangesAsync();
-        }
+            var product = await GetProductByIdAsync(productId)
+                ?? throw new KeyNotFoundException("Product not found");
 
-
-        public async Task DeletingDeliveredProducts(int productId, int quantity)
-        {
-            Product product = await GetProductByIdAsync(productId);
             product.ConfirmOrder(quantity);
-            await UpdateProduct(productId, product);
+            await _context.SaveChangesAsync();
 
+            _logger.LogInformation(
+                "Product {ProductId} stock decremented by {Quantity}",
+                productId, quantity);
         }
     }
 }

@@ -1,17 +1,13 @@
-﻿using KioskApp.Helpers;
+﻿using System.Diagnostics;
+using KioskApp.Helpers;
 using KioskApp.Models;
-using Microsoft.Maui.ApplicationModel.Communication;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace KioskApp.Services
 {
     public class UserService : IUserService
     {
-        private IUserApiService _userApiService;
+        private readonly IUserApiService _userApiService;
         private readonly AppState _appState;
-
 
         public UserService()
         {
@@ -19,142 +15,125 @@ namespace KioskApp.Services
             _appState = DependencyService.Get<AppState>();
         }
 
-        public async Task<ApiResponse> Register(User user)
+        // Register a new user and update application state
+        public async Task<ApiResponse> RegisterAsync(User user)
         {
-            var response = await _userApiService.RegisterUser(user);
+            var response = await _userApiService.RegisterUserAsync(user);
             if (response.IsSuccess)
             {
                 await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
-                Debug.WriteLine($"Registered User in UserService: {response.User.Email}");
+                Debug.WriteLine($"Registered user: {response.User.Email}");
             }
             else
             {
-                Debug.WriteLine($"Registration failed in UserService: {response.Message}");
+                Debug.WriteLine($"Registration failed: {response.Message}");
             }
 
-            ApiResponse completeResponse = new ApiResponse()
+            MessagingCenter.Send(this, "UserStateChanged");
+
+            return new ApiResponse
             {
                 IsSuccess = response.IsSuccess,
                 Message = response.Message,
                 Data = response.User
             };
-
-            MessagingCenter.Send(this, "UserStateChanged"); // To update the main and product page
-
-            return completeResponse;
         }
 
-        public async Task<ApiResponse> Authenticate(string email, string password)
+        // Authenticate using email and password
+        public async Task<ApiResponse> AuthenticateAsync(string email, string password)
         {
-            //Debug.WriteLine("--------- flag 1 --------- Authenticate(string email, string password)");
-
-            var response = await _userApiService.AuthenticateUser(email, password);
-            //Debug.WriteLine("--------- flag 2 --------- Authenticate(string email, string password)");
-
+            var response = await _userApiService.AuthenticateUserAsync(email, password);
             if (response.IsSuccess)
             {
                 await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
-                Debug.WriteLine($"Authenticated User in UserService: {response.User.Email}");
+                Debug.WriteLine($"Authenticated user: {response.User.Email}");
             }
             else
             {
-                Debug.WriteLine($"Authentication failed in UserService: {response.Message}");
+                Debug.WriteLine($"Authentication failed: {response.Message}");
             }
-            //Debug.WriteLine("--------- flag 3 --------- Authenticate(string email, string password)");
 
-            ApiResponse completeResponse = new ApiResponse()
+            MessagingCenter.Send(this, "UserStateChanged");
+
+            return new ApiResponse
             {
                 IsSuccess = response.IsSuccess,
                 Message = response.Message,
                 Data = response.User
             };
-
-            MessagingCenter.Send(this, "UserStateChanged"); // To update the main and product page
-
-            return completeResponse;
         }
 
-        public async Task<User> AuthenticateWithToken()
+        // Authenticate with stored refresh token
+        public async Task<User> AuthenticateWithTokenAsync()
         {
             try
             {
                 var refreshToken = await SecureStorage.GetAsync("refresh_token");
-
                 if (string.IsNullOrEmpty(refreshToken))
                 {
                     Debug.WriteLine("No refresh token found.");
                     return null;
                 }
 
-                var response = await _userApiService.AuthenticateWithToken(refreshToken);
-                Debug.WriteLine("AuthenticateWithToken 3");
-
+                var response = await _userApiService.AuthenticateWithTokenAsync(refreshToken);
                 if (response?.IsSuccess == true)
                 {
                     await SetCurrentUserAsync(response.User, response.AccessToken, response.RefreshToken);
-                    Debug.WriteLine($"Authenticated User with token in UserService: {response.User.Email}");
-
-                    MessagingCenter.Send(this, "UserStateChanged"); // To update the main and product page
-
+                    Debug.WriteLine($"Authenticated with token: {response.User.Email}");
+                    MessagingCenter.Send(this, "UserStateChanged");
                     return response.User;
+                }
 
-                }
-                else
-                {
-                    Debug.WriteLine($"Token authentication failed in UserService: {response?.Message}");
-                    return null;
-                }
+                Debug.WriteLine($"Token authentication failed: {response?.Message}");
+                return null;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in AuthenticateWithToken: {ex.Message}");
+                Debug.WriteLine($"Error authenticating with token: {ex.Message}");
                 return null;
             }
-
-
         }
 
-        public async Task Logout()
+        // Log out the current user and clear stored tokens
+        public async Task LogoutAsync()
         {
             await ClearCurrentUserAsync();
-
-            MessagingCenter.Send(this, "UserStateChanged"); // To update the main and product page
+            MessagingCenter.Send(this, "UserStateChanged");
         }
 
-        public User GetCurrentUser()
-        {
-            return _appState.CurrentUser;
-        }
+        // Get the currently logged in user from application state
+        public User GetCurrentUser() => _appState.CurrentUser;
 
-        public async Task<List<User>> GetAllUsers()
+        // Retrieve all users (not implemented)
+        public async Task<List<User>> GetAllUsersAsync()
         {
-            // Temporarily return an empty list
             return new List<User>();
         }
 
+        // Set the current user in application state
         public void SetCurrentUser(User user)
         {
             _appState.CurrentUser = user;
-            Debug.WriteLine($"Set Current User in UserService: {_appState.CurrentUser?.Email}");
+            Debug.WriteLine($"Current user set: {user.Email}");
         }
 
+        // Clear current user and tokens from state and secure storage
         public async Task ClearCurrentUserAsync()
         {
             _appState.CurrentUser = null;
             _appState.AccessToken = null;
             await SecureStorage.SetAsync("auth_token", string.Empty);
             await SecureStorage.SetAsync("refresh_token", string.Empty);
-            Debug.WriteLine("User has been logged out and tokens removed.");
+            Debug.WriteLine("User logged out and tokens cleared.");
         }
 
+        // Store user and tokens in state and secure storage
         private async Task SetCurrentUserAsync(User user, string accessToken, string refreshToken)
         {
             _appState.CurrentUser = user;
             _appState.AccessToken = accessToken;
-
-            await SecureStorage.SetAsync("auth_token", accessToken); // Store the new access token
-            await SecureStorage.SetAsync("refresh_token", refreshToken); // Store the new refresh token
+            await SecureStorage.SetAsync("auth_token", accessToken);
+            await SecureStorage.SetAsync("refresh_token", refreshToken);
         }
-
     }
 }

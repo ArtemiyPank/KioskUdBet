@@ -1,5 +1,4 @@
 ﻿using KioskApp.ViewModels;
-using Microsoft.Maui.Controls;
 
 namespace KioskApp.Views
 {
@@ -11,24 +10,26 @@ namespace KioskApp.Views
             BindingContext = new LoginViewModel();
         }
 
+        // Toggle the password field visibility when the checkbox is changed
         private void OnShowPasswordCheckedChanged(object sender, CheckedChangedEventArgs e)
         {
             passwordEntry.IsPassword = !e.Value;
         }
 
+        // Handle the Login button click
         private async void OnLoginClicked(object sender, EventArgs e)
         {
-            var viewModel = BindingContext as LoginViewModel;
-            if (viewModel != null)
+            if (BindingContext is LoginViewModel viewModel)
             {
-                var result = await viewModel.Login();
-                if (result)
+                bool success = await viewModel.LoginAsync();
+                if (success)
                 {
-                    // Navigate to profile page or other appropriate action
+                    // Navigate to the profile page on successful login
                     await Navigation.PushAsync(new ProfilePage());
                 }
                 else
                 {
+                    // Show an error alert if login failed
                     await DisplayAlert("Error", viewModel.ErrorMessage, "OK");
                 }
             }

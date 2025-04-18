@@ -1,183 +1,195 @@
 ﻿using KioskAPI.Data;
 using KioskAPI.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace KioskAPI.Services
 {
     public class OrderService : IOrderService
     {
         private readonly IProductService _productService;
-
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<OrderService> _logger;
 
-        public OrderService(IProductService productService, ApplicationDbContext context)
+        public OrderService(
+            IProductService productService,
+            ApplicationDbContext context,
+            ILogger<OrderService> logger)
         {
             _productService = productService;
             _context = context;
+            _logger = logger;
         }
 
+        // Create and persist a new order
         public async Task CreateOrderAsync(Order order)
         {
-            // Присоединяем пользователя и продукты к контексту
+            _logger.LogInformation("Creating order for user {UserId}", order.UserId);
+
+            // Attach existing user and products to avoid re-insert
             _context.Attach(order.User);
-            foreach (var orderItem in order.OrderItems)
+            foreach (var item in order.OrderItems)
             {
-                _context.Attach(orderItem.Product);
+                _context.Attach(item.Product);
             }
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Order {OrderId} created", order.Id);
         }
 
-        public async Task<Order> GetOrderByIdAsync(int id)
+        // Create a new empty order for the user
+        public Task CreateNewEmptyOrderAsync(User user)
+        {
+            var order = Order.CreateNewEmptyOrder(user);
+            return CreateOrderAsync(order);
+        }
+
+        // Retrieve an order by ID, including items and user
+        public async Task<Order?> GetOrderByIdAsync(int id)
         {
             return await _context.Orders
                 .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Product)
+                    .ThenInclude(oi => oi.Product)
                 .Include(o => o.User)
                 .FirstOrDefaultAsync(o => o.Id == id);
         }
 
+        // Update the status of an order
         public async Task UpdateOrderStatusAsync(int id, string status)
         {
             var order = await GetOrderByIdAsync(id);
-            if (order != null)
+            if (order == null)
             {
-                order.Status = status;
-                await _context.SaveChangesAsync();
+                _logger.LogWarning("Order {OrderId} not found for status update", id);
+                return;
             }
+
+            order.Status = status;
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Order {OrderId} status set to {Status}", id, status);
         }
 
-        public async Task DeleteOrderAsync(int id)
-        {
-            var order = await GetOrderByIdAsync(id);
-            if (order != null)
-            {
-                _context.Orders.Remove(order);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task<List<Order>> GetAllOrdersAsync()
-        {
-            return await _context.Orders
-                .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Product)
-                .Include(o => o.User)
-                .ToListAsync();
-        }
-
-        public async Task<Order> UpdateOrderAsync(Order order)
-        {
-            var orderId = order.Id;
-            Console.WriteLine($"Starting UpdateOrderAsync for Order ID: {orderId}");
-
-            // Загружаем существующий заказ из базы данных
-            var existingOrder = await _context.Orders
-                .Include(o => o.OrderItems)
-                .FirstOrDefaultAsync(o => o.Id == orderId);
-
-            if (existingOrder == null)
-            {
-                Console.WriteLine($"Order ID {orderId} not found.");
-                return null; // Возвращаем null, если заказ не найден
-            }
-
-            // Удаляем все старые элементы заказа
-            foreach (var item in existingOrder.OrderItems.ToList())
-            {
-                _context.OrderItems.Remove(item);
-                Console.WriteLine($"Removed existing OrderItem for Product ID: {item.ProductId}");
-            }
-
-            await _context.SaveChangesAsync(); // Сохраняем изменения
-
-            // Обновляем основные данные заказа
-            existingOrder.Building = order.Building;
-            existingOrder.RoomNumber = order.RoomNumber;
-            existingOrder.DeliveryStartTime = order.DeliveryStartTime;
-            existingOrder.DeliveryEndTime = order.DeliveryEndTime;
-            existingOrder.Status = order.Status;
-            existingOrder.CreationTime = DateTime.Now;
-
-            // Добавляем новые элементы заказа
-            foreach (var newItem in order.OrderItems)
-            {
-                var product = await _context.Products.FindAsync(newItem.ProductId);
-                if (product != null)
-                {
-                    var orderItem = new OrderItem
-                    {
-                        ProductId = newItem.ProductId,
-                        Quantity = newItem.Quantity,
-                        Product = product,
-                        OrderId = existingOrder.Id
-                    };
-                    existingOrder.OrderItems.Add(orderItem);
-                    Console.WriteLine($"Added new OrderItem for Product ID: {newItem.ProductId}");
-                }
-            }
-
-            _context.Entry(existingOrder).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                Console.WriteLine($"Order ID {existingOrder.Id} updated successfully.");
-                return existingOrder;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error saving Order ID {existingOrder.Id}: {ex.Message}");
-                throw;
-            }
-        }
-
-
-        public async Task UpdatingQuantityForDeliveredOrderAsync(Order order)
+        // Adjust product stock when an order is delivered
+        public async Task UpdateStockForDeliveredOrderAsync(Order order)
         {
             foreach (var item in order.OrderItems)
             {
                 try
                 {
-                    Console.WriteLine($"Updating product {item.ProductId} with delivered quantity {item.Quantity}.");
-                    await _productService.DeletingDeliveredProducts(item.ProductId, item.Quantity);
+                    _logger.LogInformation(
+                        "Confirming {Quantity} units for product {ProductId}",
+                        item.Quantity, item.ProductId);
+
+                    await _productService.ConfirmOrderAsync(item.ProductId, item.Quantity);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error updating product {item.ProductId}: {ex.Message}");
+                    _logger.LogError(
+                        ex,
+                        "Error confirming product {ProductId} for order {OrderId}",
+                        item.ProductId, order.Id);
                 }
             }
         }
 
-
-
-        public async Task CreateNewEmptyOrder(User user)
+        // Remove an order and its items
+        public async Task DeleteOrderAsync(int id)
         {
-            var newOrder = Order.CreateNewEmptyOrder(user);
-            await CreateOrderAsync(newOrder);
+            var order = await GetOrderByIdAsync(id);
+            if (order == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found for deletion", id);
+                return;
+            }
+
+            _context.Orders.Remove(order);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Order {OrderId} deleted", id);
         }
 
+        // Retrieve all orders
+        public async Task<List<Order>> GetAllOrdersAsync()
+        {
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Product)
+                .Include(o => o.User)
+                .ToListAsync();
+        }
+
+        // Update an existing order's details and items
+        public async Task<Order> UpdateOrderAsync(Order order)
+        {
+            _logger.LogInformation("Updating order {OrderId}", order.Id);
+
+            var existing = await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == order.Id);
+
+            if (existing == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found", order.Id);
+                return null!;
+            }
+
+            // Remove old items
+            foreach (var oldItem in existing.OrderItems.ToList())
+            {
+                _context.OrderItems.Remove(oldItem);
+                _logger.LogInformation(
+                    "Removed item {ItemId} from order {OrderId}",
+                    oldItem.Id, order.Id);
+            }
+            await _context.SaveChangesAsync();
+
+            // Update order metadata
+            existing.Building = order.Building;
+            existing.RoomNumber = order.RoomNumber;
+            existing.DeliveryStartTime = order.DeliveryStartTime;
+            existing.DeliveryEndTime = order.DeliveryEndTime;
+            existing.Status = order.Status;
+            existing.CreationTime = DateTime.Now;
+
+            // Add new items
+            foreach (var newItem in order.OrderItems)
+            {
+                var product = await _context.Products.FindAsync(newItem.ProductId);
+                if (product != null)
+                {
+                    var orderItem = new OrderItem(product, newItem.Quantity)
+                    {
+                        OrderId = existing.Id
+                    };
+                    existing.OrderItems.Add(orderItem);
+                    _logger.LogInformation(
+                        "Added item for product {ProductId} to order {OrderId}",
+                        newItem.ProductId, existing.Id);
+                }
+            }
+
+            _context.Entry(existing).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Order {OrderId} updated successfully", existing.Id);
+            return existing;
+        }
+
+        // Get the latest order for a user
         public async Task<Order?> GetLastOrderForUserAsync(int userId)
         {
-            var lastOrder = await _context.Orders
-                .Where(o => o.User.Id == userId)
+            return await _context.Orders
+                .Where(o => o.UserId == userId)
                 .OrderByDescending(o => o.CreationTime)
                 .FirstOrDefaultAsync();
-
-            return lastOrder;
         }
 
+        // Retrieve items for a specific order
         public async Task<IEnumerable<OrderItem>> GetOrderItemsForOrderAsync(int orderId)
         {
-            var OrderItems = await _context.OrderItems
-                                   .Where(oi => oi.OrderId == orderId)
-                                   .Include(oi => oi.Product)
-                                   .ToListAsync();
-            return OrderItems;
+            return await _context.OrderItems
+                .Where(oi => oi.OrderId == orderId)
+                .Include(oi => oi.Product)
+                .ToListAsync();
         }
     }
 }

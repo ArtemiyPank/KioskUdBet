@@ -2,12 +2,15 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="KioskApp.Views.RegisterPage"
+             Title="Register"
              BackgroundColor="{DynamicResource PrimaryBackgroundColor}">
-    <!-- Оборачиваем содержимое в ScrollView для адаптивного отображения -->
+
+    <!-- Allow scrolling on smaller screens -->
     <ScrollView>
         <StackLayout Padding="20"
                      Spacing="20">
-            <!-- Заголовок страницы -->
+
+            <!-- Page header -->
             <Label Text="Register"
                    FontSize="28"
                    FontAttributes="Bold"
@@ -15,48 +18,48 @@
                    HorizontalOptions="Center"
                    Margin="0,10,0,20" />
 
-            <!-- Поле ввода Email -->
-            <Entry Text="{Binding Email}"
-                   x:Name="emailEntry"
+            <!-- Email input -->
+            <Entry x:Name="emailEntry"
                    Placeholder="Email"
+                   Text="{Binding Email}"
                    Keyboard="Email"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода Password -->
-            <Entry Text="{Binding Password}"
-                   x:Name="passwordEntry"
+            <!-- Password input -->
+            <Entry x:Name="passwordEntry"
                    Placeholder="Password"
+                   Text="{Binding Password}"
                    IsPassword="True"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- CheckBox для показа/скрытия пароля -->
+            <!-- Show/hide password checkbox -->
             <CheckBox x:Name="showPasswordCheckBox"
                       CheckedChanged="OnShowPasswordCheckedChanged" />
 
-            <!-- Поле ввода First Name -->
-            <Entry Text="{Binding FirstName}"
-                   x:Name="firstNameEntry"
+            <!-- First name input -->
+            <Entry x:Name="firstNameEntry"
                    Placeholder="First Name"
+                   Text="{Binding FirstName}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода Last Name -->
-            <Entry Text="{Binding LastName}"
-                   x:Name="lastNameEntry"
+            <!-- Last name input -->
+            <Entry x:Name="lastNameEntry"
                    Placeholder="Last Name"
+                   Text="{Binding LastName}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Picker для выбора Building -->
-            <Picker SelectedItem="{Binding Building}"
-                    x:Name="buildingPicker"
+            <!-- Building picker -->
+            <Picker x:Name="buildingPicker"
                     Title="Select Building"
+                    SelectedItem="{Binding Building}"
                     BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16">
@@ -70,18 +73,18 @@
                 </Picker.ItemsSource>
             </Picker>
 
-            <!-- Поле ввода Room Number -->
-            <Entry Text="{Binding RoomNumber}"
-                   x:Name="roomNumberEntry"
+            <!-- Room number input -->
+            <Entry x:Name="roomNumberEntry"
                    Placeholder="Room Number"
+                   Text="{Binding RoomNumber}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Picker для выбора Language -->
-            <Picker SelectedItem="{Binding Language}"
-                    x:Name="languagePicker"
+            <!-- Language picker -->
+            <Picker x:Name="languagePicker"
                     Title="Select Language"
+                    SelectedItem="{Binding Language}"
                     BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16">
@@ -94,32 +97,33 @@
                 </Picker.ItemsSource>
             </Picker>
 
-            <!-- Поле ввода Place Of Birthday -->
-            <Entry Placeholder="Place Of Birthday"
-                   Text="{Binding PlaceOfBirth, Mode=TwoWay}"
+            <!-- Place of birth input -->
+            <Entry Placeholder="Place of Birth"
+                   Text="{Binding PlaceOfBirth}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Кнопка для получения геолокации -->
-            <Button Text="Get location"
+            <!-- Button to autofill place of birth via geolocation -->
+            <Button Text="Use Current Location"
                     Command="{Binding SetPlaceOfBirthCommand}"
                     BackgroundColor="{DynamicResource ButtonBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16" />
 
-            <!-- Кнопка регистрации -->
+            <!-- Submit registration -->
             <Button Text="Register"
                     Clicked="OnRegisterClicked"
                     BackgroundColor="{DynamicResource ButtonBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16" />
 
-            <!-- Метка для вывода сообщения об ошибке -->
+            <!-- Error message -->
             <Label Text="{Binding ErrorMessage}"
                    TextColor="{DynamicResource AccentColor}"
-                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NullToBooleanConverter}}"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                    FontSize="14" />
+
         </StackLayout>
     </ScrollView>
 </ContentPage>

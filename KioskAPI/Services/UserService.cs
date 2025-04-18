@@ -1,9 +1,6 @@
 ﻿using KioskAPI.Data;
 using KioskAPI.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace KioskAPI.Services
 {
@@ -13,90 +10,115 @@ namespace KioskAPI.Services
         private readonly ApplicationDbContext _context;
         private readonly ITokenService _tokenService;
 
-        public UserService(ILogger<UserService> logger, ApplicationDbContext context, ITokenService tokenService)
+        public UserService(
+            ILogger<UserService> logger,
+            ApplicationDbContext context,
+            ITokenService tokenService)
         {
             _logger = logger;
             _context = context;
             _tokenService = tokenService;
         }
 
-        // Authenticate user by email and password
-        public async Task<User?> Authenticate(string email, string password)
+        // Authenticate a user by email and password
+        public async Task<User?> AuthenticateAsync(string email, string password)
         {
-            var user = await _context.Users.SingleOrDefaultAsync(x => x.Email == email);
-            if (user == null) return null;
-
-            var isPasswordValid = BCrypt.Net.BCrypt.Verify(password + user.Salt, user.PasswordHash);
-            return isPasswordValid ? user : null;
-        }
-
-        // Authenticate user using refresh token
-        public async Task<(User, string, string)?> AuthenticateWithRefreshToken(string refreshToken)
-        {
-            var user = await GetUserByRefreshToken(refreshToken);
+            _logger.LogInformation("Authenticating user with email {Email}", email);
+            var user = await _context.Users
+                .SingleOrDefaultAsync(u => u.Email == email);
 
             if (user == null)
             {
+                _logger.LogWarning("User with email {Email} not found", email);
                 return null;
             }
 
-            var newAccessToken = _tokenService.GenerateAccessToken(user);
-            var newRefreshToken = _tokenService.GenerateRefreshToken(user);
+            var isValid = BCrypt.Net.BCrypt.Verify(password + user.Salt, user.PasswordHash);
+            if (!isValid)
+            {
+                _logger.LogWarning("Invalid password for user {Email}", email);
+                return null;
+            }
 
-            // Обновление существующего токена
-            await SaveRefreshToken(user.Id, newRefreshToken.Token, newRefreshToken.ExpiryDate);
-
-            return (user, newAccessToken, newRefreshToken.Token);
-        }
-
-        // Register a new user
-        public async Task<User> Register(User user)
-        {
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            _logger.LogInformation("User {Email} authenticated successfully", email);
             return user;
         }
 
-        // Check if email exists in the database
-        public async Task<bool> EmailExists(string email)
+        // Authenticate using a refresh token and return new tokens
+        public async Task<(User, string, string)?> AuthenticateWithRefreshTokenAsync(string refreshToken)
         {
+            _logger.LogInformation("Authenticating with refresh token");
+            var user = await GetUserByRefreshTokenAsync(refreshToken);
+            if (user == null)
+            {
+                _logger.LogWarning("Invalid refresh token");
+                return null;
+            }
+
+            var accessToken = _tokenService.GenerateAccessToken(user);
+            var newRefreshToken = _tokenService.GenerateRefreshToken(user).Token;
+            await SaveRefreshTokenAsync(user.Id, newRefreshToken, DateTime.UtcNow.AddYears(1));
+
+            _logger.LogInformation("Refresh token authentication successful for user {Email}", user.Email);
+            return (user, accessToken, newRefreshToken);
+        }
+
+        // Register a new user
+        public async Task<User> RegisterAsync(User user)
+        {
+            _logger.LogInformation("Registering user with email {Email}", user.Email);
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("User {Email} registered with ID {UserId}", user.Email, user.Id);
+            return user;
+        }
+
+        // Check if an email is already registered
+        public async Task<bool> EmailExistsAsync(string email)
+        {
+            _logger.LogInformation("Checking if email {Email} exists", email);
             return await _context.Users.AnyAsync(u => u.Email == email);
         }
 
-        // Get all users
-        public async Task<List<User>> GetAllUsers()
+        // Retrieve all users
+        public async Task<List<User>> GetAllUsersAsync()
         {
+            _logger.LogInformation("Retrieving all users");
             return await _context.Users.ToListAsync();
         }
 
-        // Get user by email
-        public async Task<User?> GetUserByEmail(string email)
+        // Retrieve a user by email
+        public async Task<User?> GetUserByEmailAsync(string email)
         {
-            return await _context.Users.SingleOrDefaultAsync(u => u.Email == email);
+            _logger.LogInformation("Fetching user by email {Email}", email);
+            return await _context.Users
+                .SingleOrDefaultAsync(u => u.Email == email);
         }
 
-        // Get user by ID
-        public async Task<User?> GetUserById(int userId)
+        // Retrieve a user by ID
+        public async Task<User?> GetUserByIdAsync(int userId)
         {
+            _logger.LogInformation("Fetching user by ID {UserId}", userId);
             return await _context.Users.FindAsync(userId);
         }
 
-        // Save refresh token in the database (обновляем или создаем новый)
-        public async Task SaveRefreshToken(int userId, string token, DateTime expiryDate)
+        // Save or update a refresh token for a user
+        public async Task SaveRefreshTokenAsync(int userId, string token, DateTime expiryDate)
         {
-            var refreshToken = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.UserId == userId);
+            _logger.LogInformation("Saving refresh token for user {UserId}", userId);
 
-            if (refreshToken != null)
+            var existing = await _context.RefreshTokens
+                .SingleOrDefaultAsync(rt => rt.UserId == userId);
+
+            if (existing != null)
             {
-                // Обновление существующего токена
-                refreshToken.Token = token;
-                refreshToken.ExpiryDate = expiryDate;
-                refreshToken.IsRevoked = false;
+                existing.Token = token;
+                existing.ExpiryDate = expiryDate;
+                existing.IsRevoked = false;
             }
             else
             {
-                // Создание нового токена
-                refreshToken = new RefreshToken
+                var refreshToken = new RefreshToken
                 {
                     UserId = userId,
                     Token = token,
@@ -107,37 +129,58 @@ namespace KioskAPI.Services
             }
 
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Refresh token saved for user {UserId}", userId);
         }
 
-        // Validate refresh token
-        public async Task<bool> ValidateRefreshToken(User user, string refreshToken)
+        // Validate that the refresh token belongs to the user and is active
+        public async Task<bool> ValidateRefreshTokenAsync(User user, string refreshToken)
         {
+            _logger.LogInformation("Validating refresh token for user {UserId}", user.Id);
+
             var token = await _context.RefreshTokens
-                .SingleOrDefaultAsync(t => t.Token == refreshToken && t.UserId == user.Id && !t.IsRevoked);
-            return token != null && token.ExpiryDate > DateTime.UtcNow;
+                .SingleOrDefaultAsync(rt =>
+                    rt.UserId == user.Id &&
+                    rt.Token == refreshToken &&
+                    !rt.IsRevoked);
+
+            var isValid = token != null && token.ExpiryDate > DateTime.UtcNow;
+            _logger.LogInformation(
+                "Refresh token validation for user {UserId} returned {IsValid}",
+                user.Id, isValid);
+
+            return isValid;
         }
 
-        // Revoke refresh token
-        public async Task RevokeRefreshToken(User user, string refreshToken)
+        // Revoke a given refresh token for the user
+        public async Task RevokeRefreshTokenAsync(User user, string refreshToken)
         {
+            _logger.LogInformation("Revoking refresh token for user {UserId}", user.Id);
+
             var token = await _context.RefreshTokens
-                .SingleOrDefaultAsync(t => t.Token == refreshToken && t.UserId == user.Id);
+                .SingleOrDefaultAsync(rt =>
+                    rt.UserId == user.Id &&
+                    rt.Token == refreshToken);
+
             if (token != null)
             {
                 token.IsRevoked = true;
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Refresh token revoked for user {UserId}", user.Id);
             }
         }
 
-        // Get user by refresh token
-        public async Task<User?> GetUserByRefreshToken(string refreshToken)
+        // Retrieve the user associated with a given refresh token
+        public async Task<User?> GetUserByRefreshTokenAsync(string refreshToken)
         {
-            var token = await _context.RefreshTokens.Include(rt => rt.User)
-                                                     .SingleOrDefaultAsync(rt => rt.Token == refreshToken && !rt.IsRevoked);
+            _logger.LogInformation("Fetching user by refresh token");
+
+            var token = await _context.RefreshTokens
+                .Include(rt => rt.User)
+                .SingleOrDefaultAsync(rt =>
+                    rt.Token == refreshToken &&
+                    !rt.IsRevoked);
 
             return token?.User;
         }
     }
-
 }
-

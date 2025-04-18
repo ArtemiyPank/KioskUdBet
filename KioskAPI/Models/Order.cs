@@ -1,28 +1,40 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace KioskAPI.Models
+﻿namespace KioskAPI.Models
 {
     public class Order
     {
+        // Primary key
         public int Id { get; set; }
 
+        // Foreign key to User
         public int UserId { get; set; }
+
+        // Navigation property for the user who placed the order
         public User User { get; set; }
 
+        // Collection of items included in this order
         public List<OrderItem> OrderItems { get; set; }
+
+        // Timestamp when the order was created
         public DateTime CreationTime { get; set; } = DateTime.Now;
+
+        // Delivery location details
         public string Building { get; set; }
         public string RoomNumber { get; set; }
+
+        // Delivery time window
         public DateTime DeliveryStartTime { get; set; }
         public DateTime DeliveryEndTime { get; set; }
-        public string Status { get; set; } = "Not placed"; // Изначальный статус
 
+        // Current status of the order
+        public string Status { get; set; } = "Not placed";
+
+        // Default constructor initializes the items list
         public Order()
         {
             OrderItems = new List<OrderItem>();
         }
 
+        // Constructor to create an order with a user and initial items
         public Order(User user, List<OrderItem> orderItems)
         {
             User = user;
@@ -30,14 +42,14 @@ namespace KioskAPI.Models
             Building = user.Building;
             RoomNumber = user.RoomNumber;
             Status = "Not placed";
-            OrderItems = orderItems;
+            OrderItems = orderItems ?? new List<OrderItem>();
             CreationTime = DateTime.Now;
         }
 
-        // Метод для создания нового пустого заказа со статусом "Not placed"
+        // Factory method to create a new empty order for a given user
         public static Order CreateNewEmptyOrder(User user)
         {
-            var newOrder = new Order
+            return new Order
             {
                 User = user,
                 UserId = user.Id,
@@ -47,37 +59,36 @@ namespace KioskAPI.Models
                 OrderItems = new List<OrderItem>(),
                 CreationTime = DateTime.Now
             };
-
-            Console.WriteLine(newOrder.ToString());
-
-            return newOrder;
         }
 
+        // Returns a detailed string representation of the order
         public override string ToString()
         {
-            string data = $"Order ID: {Id}\nUser ID: {UserId}\nUser: {User.FirstName} {User.LastName}\n" +
+            var details = $"Order ID: {Id}\n" +
+                          $"User ID: {UserId}\n" +
+                          $"User: {User.FirstName} {User.LastName}\n" +
                           $"Building: {Building}, Room: {RoomNumber}\n" +
-                          $"Delivery Time: {DeliveryStartTime:HH:mm} - {DeliveryEndTime:HH:mm}\n" +
-                          $"Status: {Status}\nOrder Items:\n";
+                          $"Delivery: {DeliveryStartTime:HH:mm} - {DeliveryEndTime:HH:mm}\n" +
+                          $"Status: {Status}\n" +
+                          "Items:\n";
 
             foreach (var item in OrderItems)
             {
-                data += $"- {item.Product.Name} x {item.Quantity}\n";
+                details += $"- {item.Product.Name} x {item.Quantity}\n";
             }
 
-            return data;
+            return details;
         }
 
+        // Returns a concise string of all items in the order
         public string ItemsToString()
         {
-            string data = $"------- Items of the {Id}th order -------";
-
+            var result = $"Order {Id} Items:";
             foreach (var item in OrderItems)
             {
-                data += item.ToString();
+                result += $" {item.Product.Name}({item.Quantity});";
             }
-
-            return data;
+            return result;
         }
     }
 }

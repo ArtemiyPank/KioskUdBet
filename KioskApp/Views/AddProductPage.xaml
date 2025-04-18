@@ -10,32 +10,33 @@
         <vm:AddProductViewModel />
     </ContentPage.BindingContext>
 
-    <!-- Оборачиваем содержимое в ScrollView для адаптивного отображения -->
+    <!-- Wrap page contents in a ScrollView for adaptive layouts -->
     <ScrollView>
         <StackLayout Padding="20"
                      Spacing="20">
-            <!-- Поле ввода имени продукта -->
+
+            <!-- Product name entry -->
             <Entry Placeholder="Name"
                    Text="{Binding NewProduct.Name}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода описания -->
+            <!-- Product description entry -->
             <Entry Placeholder="Description"
                    Text="{Binding NewProduct.Description}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода категории -->
+            <!-- Product category entry -->
             <Entry Placeholder="Category"
                    Text="{Binding NewProduct.Category}"
                    BackgroundColor="{DynamicResource SecondaryBackgroundColor}"
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода цены -->
+            <!-- Product price entry (numeric keyboard) -->
             <Entry Placeholder="Price"
                    Text="{Binding NewProduct.Price}"
                    Keyboard="Numeric"
@@ -43,7 +44,7 @@
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Поле ввода количества на складе -->
+            <!-- Product stock entry (numeric keyboard) -->
             <Entry Placeholder="Stock"
                    Text="{Binding NewProduct.Stock}"
                    Keyboard="Numeric"
@@ -51,31 +52,32 @@
                    TextColor="{DynamicResource PrimaryTextColor}"
                    FontSize="16" />
 
-            <!-- Кнопка выбора изображения -->
+            <!-- Button to pick an image file -->
             <Button Text="Choose Image"
                     Command="{Binding ChooseImageCommand}"
                     BackgroundColor="{DynamicResource ButtonBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16" />
 
-            <!-- Отображение выбранного изображения -->
+            <!-- Display the selected image -->
             <Image Source="{Binding ImagePath}"
                    HeightRequest="200"
                    WidthRequest="200"
                    Aspect="AspectFit" />
 
-            <!-- Кнопка добавления продукта -->
+            <!-- Button to submit the new product -->
             <Button Text="Add Product"
                     Command="{Binding AddProductCommand}"
                     BackgroundColor="{DynamicResource ButtonBackgroundColor}"
                     TextColor="{DynamicResource PrimaryTextColor}"
                     FontSize="16" />
 
-            <!-- Метка для вывода ошибок -->
+            <!-- Error message label -->
             <Label Text="{Binding ErrorMessage}"
                    TextColor="{DynamicResource AccentColor}"
                    IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                    FontSize="14" />
+
         </StackLayout>
     </ScrollView>
 </ContentPage>

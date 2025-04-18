@@ -1,17 +1,25 @@
 ﻿<?xml version="1.0" encoding="UTF-8" ?>
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:local="clr-namespace:KioskApp"
              xmlns:converters="clr-namespace:KioskApp.Helpers"
              x:Class="KioskApp.App">
+
     <Application.Resources>
         <ResourceDictionary>
+
+            <!-- Converter: shows element when bound string is not empty -->
             <converters:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter" />
+
             <ResourceDictionary.MergedDictionaries>
+                <!-- Base color definitions -->
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <!-- Shared UI styles -->
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+                <!-- Dark theme overrides -->
                 <ResourceDictionary Source="Resources/Styles/DarkThemeStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
         </ResourceDictionary>
     </Application.Resources>
+
 </Application>

@@ -1,14 +1,9 @@
 ﻿using KioskAPI.Models;
 using KioskAPI.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace KioskAPI.Controllers
 {
-
     [ApiController]
     [Route("api/[controller]")]
     public class OrderController : ControllerBase
@@ -17,7 +12,10 @@ namespace KioskAPI.Controllers
         private readonly IUserService _userService;
         private readonly ILogger<OrderController> _logger;
 
-        public OrderController(IOrderService orderService, IUserService userService, ILogger<OrderController> logger)
+        public OrderController(
+            IOrderService orderService,
+            IUserService userService,
+            ILogger<OrderController> logger)
         {
             _orderService = orderService;
             _userService = userService;
@@ -28,62 +26,61 @@ namespace KioskAPI.Controllers
         [HttpPost("createEmptyOrder")]
         public async Task<IActionResult> CreateEmptyOrder([FromBody] User user)
         {
+            _logger.LogInformation("Creating empty order for user {UserId}", user.Id);
+
+            var order = new Order(user, new List<OrderItem>())
+            {
+                Status = "Not placed"
+            };
+
             try
             {
-                Console.WriteLine($"Creating empty order for user {user.Id}");
-                var order = new Order(user, new List<OrderItem>())
-                {
-                    Status = "Not placed"
-                };
-
                 await _orderService.CreateOrderAsync(order);
-                Console.WriteLine($"Order created with ID {order.Id}");
+                _logger.LogInformation("Order created with ID {OrderId}", order.Id);
                 return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
-                Console.WriteLine($"Error creating empty order: {ex.Message}");
+                _logger.LogError(ex, "Error creating empty order for user {UserId}", user.Id);
                 return StatusCode(500, new { Message = "Internal server error" });
             }
         }
-
 
         // PUT: api/order/{id}/updateOrder
         [HttpPut("{id}/updateOrder")]
         public async Task<IActionResult> UpdateOrder(int id, [FromBody] Order order)
         {
-            Console.WriteLine($"Updating order {id}");
+            _logger.LogInformation("Updating order {OrderId} with items: {Items}", id, order.ItemsToString());
+
             try
             {
-                Console.WriteLine(order.ItemsToString());
-
                 var updatedOrder = await _orderService.UpdateOrderAsync(order);
                 if (updatedOrder == null)
                 {
-                    Console.WriteLine($"Order {id} not found");
+                    _logger.LogWarning("Order {OrderId} not found for update", id);
                     return NotFound(new { Message = "Order not found" });
                 }
 
-                Console.WriteLine($"Order {id} updated successfully");
+                _logger.LogInformation("Order {OrderId} updated successfully", id);
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
-                Console.WriteLine($"Error updating order {id}: {ex.Message}");
+                _logger.LogError(ex, "Error updating order {OrderId}", id);
                 return StatusCode(500, new { Message = "Internal server error" });
             }
         }
-
 
         // PUT: api/order/{id}/cancelOrder
         [HttpPut("{id}/cancelOrder")]
         public async Task<IActionResult> CancelOrder(int id)
         {
-            Console.WriteLine($"Cancelling order {id}");
+            _logger.LogInformation("Cancelling order {OrderId}", id);
+
             var order = await _orderService.GetOrderByIdAsync(id);
             if (order == null)
             {
-                Console.WriteLine($"Order {id} not found");
+                _logger.LogWarning("Order {OrderId} not found for cancellation", id);
                 return NotFound(new { Message = "Order not found" });
             }
 
@@ -91,17 +88,19 @@ namespace KioskAPI.Controllers
             {
                 foreach (var item in order.OrderItems)
                 {
-                    Console.WriteLine($"Releasing product {item.ProductId} with quantity {item.Quantity}");
-                    item.ReleaseProduct(); // Освобождаем зарезервированный товар
+                    _logger.LogInformation(
+                        "Releasing reserved quantity {Quantity} for product {ProductId}",
+                        item.Quantity, item.ProductId);
+                    item.ReleaseProduct();
                 }
 
                 await _orderService.DeleteOrderAsync(id);
-                Console.WriteLine($"Order {id} cancelled and deleted");
+                _logger.LogInformation("Order {OrderId} cancelled and deleted", id);
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
-                Console.WriteLine($"Error cancelling order {id}: {ex.Message}");
+                _logger.LogError(ex, "Error cancelling order {OrderId}", id);
                 return StatusCode(500, new { Message = "Internal server error" });
             }
         }
@@ -110,23 +109,24 @@ namespace KioskAPI.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetOrderById(int id)
         {
+            _logger.LogInformation("Retrieving order {OrderId}", id);
+
             try
             {
-                Console.WriteLine($"Retrieving order {id}");
                 var order = await _orderService.GetOrderByIdAsync(id);
                 if (order == null)
                 {
-                    Console.WriteLine($"Order {id} not found");
+                    _logger.LogWarning("Order {OrderId} not found", id);
                     return NotFound(new { Message = "Order not found" });
                 }
 
-                Console.WriteLine($"Returning order {id}");
+                _logger.LogInformation("Returning order {OrderId}", id);
                 return Ok(order);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
-                Console.WriteLine($"Error retrieving order {id}: {ex.Message}");
-                return StatusCode(500, new { Message = $"Internal server error: {ex.Message}" });
+                _logger.LogError(ex, "Error retrieving order {OrderId}", id);
+                return StatusCode(500, new { Message = "Internal server error" });
             }
         }
 
@@ -134,45 +134,50 @@ namespace KioskAPI.Controllers
         [HttpGet("user/{userId}/lastOrder")]
         public async Task<IActionResult> GetOrCreateLastOrder(int userId)
         {
+            _logger.LogInformation("Retrieving last order for user {UserId}", userId);
+
             try
             {
-                Console.WriteLine($"Retrieving last order for user {userId} in GetOrCreateLastOrder");
                 var order = await _orderService.GetLastOrderForUserAsync(userId);
-                Console.WriteLine($"Flag 1 ---------------");
-                // If no order exists, create a new one
+
                 if (order == null)
                 {
-                    Console.WriteLine($"No order found for user {userId}. Creating a new one.");
-                    var user = await _userService.GetUserById(userId);
+                    _logger.LogInformation(
+                        "No existing order for user {UserId}; creating new empty order",
+                        userId);
+
+                    var user = await _userService.GetUserByIdAsync(userId);
                     order = Order.CreateNewEmptyOrder(user);
                     await _orderService.CreateOrderAsync(order);
                 }
 
-                Console.WriteLine($"Returning order with ID {order.Id}");
+                order.OrderItems = (await _orderService
+                    .GetOrderItemsForOrderAsync(order.Id))
+                    ?.ToList() ?? new List<OrderItem>();
 
-                var orderItems = await _orderService.GetOrderItemsForOrderAsync(order.Id);
-                order.OrderItems = orderItems?.ToList() ?? new List<OrderItem>();
+                order.User = await _userService.GetUserByIdAsync(userId);
 
-                order.User = await _userService.GetUserById(userId);
-
-                var jsonOrder = JsonSerializer.Serialize(order, new JsonSerializerOptions { WriteIndented = true });
-                return Ok(jsonOrder);
+                _logger.LogInformation("Returning order {OrderId}", order.Id);
+                return Ok(order);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
-                Console.WriteLine($"Error retrieving or creating order for user {userId}: {ex.Message}");
+                _logger.LogError(ex, "Error retrieving or creating last order for user {UserId}", userId);
                 return StatusCode(500, new { Message = "Internal server error" });
             }
         }
 
-
+        // GET: api/order/getOrderStatus/{orderId}
         [HttpGet("getOrderStatus/{orderId}")]
         public async Task<IActionResult> GetOrderStatus(int orderId)
         {
+            _logger.LogInformation("Retrieving status for order {OrderId}", orderId);
+
             var order = await _orderService.GetOrderByIdAsync(orderId);
             if (order == null)
             {
-                return NotFound("Order not found");
+                _logger.LogWarning("Order {OrderId} not found", orderId);
+                return NotFound(new { Message = "Order not found" });
             }
 
             return Ok(order.Status);
@@ -182,24 +187,25 @@ namespace KioskAPI.Controllers
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] string status)
         {
+            _logger.LogInformation("Updating status of order {OrderId} to {Status}", id, status);
+
             try
             {
-                Console.WriteLine($"Updating status of order {id} to {status}");
                 await _orderService.UpdateOrderStatusAsync(id, status);
-                Console.WriteLine($"Order {id} status updated to {status}");
+                _logger.LogInformation("Order {OrderId} status updated to {Status}", id, status);
 
-                if(status == "Delivered")
+                if (status == "Delivered")
                 {
-                    Order order = await _orderService.GetOrderByIdAsync(id);
-                    await _orderService.UpdatingQuantityForDeliveredOrderAsync(order);
+                    var order = await _orderService.GetOrderByIdAsync(id);
+                    await _orderService.UpdateStockForDeliveredOrderAsync(order);
                 }
 
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
-                Console.WriteLine($"Error updating status of order {id}: {ex.Message}");
-                return StatusCode(500, new { Message = $"Internal server error: {ex.Message}" });
+                _logger.LogError(ex, "Error updating status of order {OrderId}", id);
+                return StatusCode(500, new { Message = "Internal server error" });
             }
         }
 
@@ -207,17 +213,18 @@ namespace KioskAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllOrders()
         {
+            _logger.LogInformation("Retrieving all orders");
+
             try
             {
-                Console.WriteLine("Retrieving all orders");
                 var orders = await _orderService.GetAllOrdersAsync();
-                Console.WriteLine($"Returning {orders.Count} orders");
+                _logger.LogInformation("Returning {Count} orders", orders.Count);
                 return Ok(orders);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
-                Console.WriteLine($"Error retrieving all orders: {ex.Message}");
-                return StatusCode(500, new { Message = $"Internal server error: {ex.Message}" });
+                _logger.LogError(ex, "Error retrieving all orders");
+                return StatusCode(500, new { Message = "Internal server error" });
             }
         }
 
@@ -225,29 +232,23 @@ namespace KioskAPI.Controllers
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveOrders()
         {
+            _logger.LogInformation("Retrieving active orders (excluding 'Delivered' and 'Not placed')");
+
             try
             {
-                Console.WriteLine("Retrieving active orders (status not Delivered and not Not placed)");
-
-                var allOrders = await _orderService.GetAllOrdersAsync();
-
-                // Фильтруем: оставляем только те, где статус не Delivered и не Not placed
-                var activeOrders = allOrders
-                    .Where(o => !string.Equals(o.Status, "Delivered", StringComparison.OrdinalIgnoreCase)
-                             && !string.Equals(o.Status, "Not placed", StringComparison.OrdinalIgnoreCase))
+                var activeOrders = (await _orderService.GetAllOrdersAsync())
+                    .Where(o => !string.Equals(o.Status, "Delivered", System.StringComparison.OrdinalIgnoreCase)
+                             && !string.Equals(o.Status, "Not placed", System.StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
-                Console.WriteLine($"Returning {activeOrders.Count} active orders");
+                _logger.LogInformation("Returning {Count} active orders", activeOrders.Count);
                 return Ok(activeOrders);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
-                Console.WriteLine($"Error retrieving active orders: {ex.Message}");
-                return StatusCode(500, new { Message = $"Internal server error: {ex.Message}" });
+                _logger.LogError(ex, "Error retrieving active orders");
+                return StatusCode(500, new { Message = "Internal server error" });
             }
         }
-
     }
-
-
 }

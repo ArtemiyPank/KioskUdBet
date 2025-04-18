@@ -1,10 +1,7 @@
-﻿using KioskAPI.Controllers;
-using KioskAPI.Models;
+﻿using KioskAPI.Models;
 using KioskAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
-
 
 namespace KioskAPI.Controllers
 {
@@ -15,199 +12,203 @@ namespace KioskAPI.Controllers
         private readonly IProductService _productService;
         private readonly ILogger<ProductsController> _logger;
 
-        public ProductsController(IProductService productService, ILogger<ProductsController> logger)
+        public ProductsController(
+            IProductService productService,
+            ILogger<ProductsController> logger)
         {
             _productService = productService;
             _logger = logger;
         }
 
+        // GET: api/products/getProducts
         [HttpGet("getProducts")]
         public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {
-            Console.WriteLine("Request received: Get all products.");
-            var products = await _productService.GetProducts();
-            Console.WriteLine($"Returning {products.Count} products.");
+            _logger.LogInformation("Fetching all products");
+            var products = await _productService.GetProductsAsync();
+            _logger.LogInformation("Returning {Count} products", products.Count);
             return Ok(products);
         }
 
-        [HttpPut("{id}")]
+        // GET: api/products/{id}
+        [HttpGet("{id}")]
         public async Task<ActionResult<Product>> GetProductById(int id)
         {
-            Console.WriteLine($"Request received: Get product by ID {id}.");
+            _logger.LogInformation("Fetching product with ID {ProductId}", id);
             var product = await _productService.GetProductByIdAsync(id);
             if (product == null)
             {
-                Console.WriteLine($"Product with ID {id} not found.");
+                _logger.LogWarning("Product {ProductId} not found", id);
                 return NotFound();
             }
-            Console.WriteLine($"Returning product: {product.Name}");
-            return product;
+            _logger.LogInformation("Returning product {ProductName}", product.Name);
+            return Ok(product);
         }
 
+        // POST: api/products/addProduct
         [Authorize(Roles = "Admin")]
         [HttpPost("addProduct")]
         public async Task<IActionResult> AddProduct([FromForm] Product product, IFormFile image)
         {
+            _logger.LogInformation("Adding new product {ProductName}", product.Name);
+
             try
             {
-                Console.WriteLine($"Request received: Add product {product.Name}");
-                var newProduct = await _productService.AddProduct(product);
-                Console.WriteLine($"Product added with ID {newProduct.Id}");
+                var newProduct = await _productService.AddProductAsync(product);
+                _logger.LogInformation("Product created with ID {ProductId}", newProduct.Id);
 
                 if (image != null && image.Length > 0)
                 {
-                    Console.WriteLine($"Saving image for product {newProduct.Id}");
-                    var newFileName = $"product_{newProduct.Id}.jpg";
-                    var imagePath = Path.Combine("wwwroot/images", newFileName);
+                    // Save uploaded image to wwwroot/images
+                    var fileName = $"product_{newProduct.Id}.jpg";
+                    var imagePath = Path.Combine("wwwroot", "images", fileName);
 
-                    using (var stream = new FileStream(imagePath, FileMode.Create))
-                    {
-                        await image.CopyToAsync(stream);
-                    }
+                    using var stream = new FileStream(imagePath, FileMode.Create);
+                    await image.CopyToAsync(stream);
 
-                    newProduct.ImageUrl = $"/images/{newFileName}";
-                    await _productService.UpdateProduct(newProduct.Id, newProduct);
+                    newProduct.ImageUrl = $"/images/{fileName}";
+                    await _productService.UpdateProductAsync(newProduct.Id, newProduct);
+                    _logger.LogInformation("Image saved for product {ProductId}", newProduct.Id);
                 }
 
                 return Ok(newProduct);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error adding product: {ex.Message}");
+                _logger.LogError(ex, "Error adding product {ProductName}", product.Name);
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error adding product");
             }
         }
 
+        // PUT: api/products/updateProduct/{id}
         [Authorize(Roles = "Admin")]
         [HttpPut("updateProduct/{id}")]
-        public async Task<IActionResult> UpdateProduct(int id, [FromForm] Product product, IFormFile image = null)
+        public async Task<IActionResult> UpdateProduct(int id, [FromForm] Product product, IFormFile? image = null)
         {
-            try
+            _logger.LogInformation("Updating product {ProductId}", id);
+
+            if (id != product.Id)
             {
-                Console.WriteLine($"Request received: Update product {id}");
-                if (id != product.Id) return BadRequest("Product ID mismatch");
-
-                var existingProduct = await _productService.GetProductByIdAsync(id);
-                if (existingProduct == null)
-                {
-                    Console.WriteLine($"Product with ID {id} not found.");
-                    return NotFound("Product not found");
-                }
-
-                // Обновляем свойства продукта
-                existingProduct.Name = product.Name;
-                existingProduct.Description = product.Description;
-                existingProduct.Price = product.Price;
-                existingProduct.Stock = product.Stock;
-                existingProduct.ReservedStock = product.ReservedStock;
-                existingProduct.Category = product.Category;
-                existingProduct.LastUpdated = DateTime.UtcNow;
-
-                await _productService.UpdateProduct(id, existingProduct);
-
-                if (image != null && image.Length > 0)
-                {
-                    Console.WriteLine($"Updating image for product {id}");
-                    var newFileName = $"product_{existingProduct.Id}.jpg";
-                    var imagePath = Path.Combine("wwwroot/images", newFileName);
-
-                    using (var stream = new FileStream(imagePath, FileMode.Create))
-                    {
-                        await image.CopyToAsync(stream);
-                    }
-
-                    existingProduct.ImageUrl = $"/images/{newFileName}";
-                    await _productService.UpdateProduct(existingProduct.Id, existingProduct);
-                }
-
-                return Ok(existingProduct);
+                _logger.LogWarning("Product ID mismatch: route ID {RouteId} vs body ID {BodyId}", id, product.Id);
+                return BadRequest("Product ID mismatch");
             }
-            catch (Exception ex)
+
+            var existing = await _productService.GetProductByIdAsync(id);
+            if (existing == null)
             {
-                Console.WriteLine($"Error updating product: {ex.Message}");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error updating product");
+                _logger.LogWarning("Product {ProductId} not found for update", id);
+                return NotFound("Product not found");
             }
+
+            // Update product fields
+            existing.Name = product.Name;
+            existing.Description = product.Description;
+            existing.Price = product.Price;
+            existing.Stock = product.Stock;
+            existing.ReservedStock = product.ReservedStock;
+            existing.Category = product.Category;
+            existing.LastUpdated = DateTime.UtcNow;
+
+            await _productService.UpdateProductAsync(id, existing);
+            _logger.LogInformation("Core data updated for product {ProductId}", id);
+
+            if (image != null && image.Length > 0)
+            {
+                // Replace product image file
+                var fileName = $"product_{id}.jpg";
+                var imagePath = Path.Combine("wwwroot", "images", fileName);
+
+                using var stream = new FileStream(imagePath, FileMode.Create);
+                await image.CopyToAsync(stream);
+
+                existing.ImageUrl = $"/images/{fileName}";
+                await _productService.UpdateProductAsync(id, existing);
+                _logger.LogInformation("Image updated for product {ProductId}", id);
+            }
+
+            return Ok(existing);
         }
 
-        // API для резервирования товара
+        // POST: api/products/reserve
         [HttpPost("reserve")]
         public async Task<IActionResult> ReserveProductStock([FromBody] QuantityRequest request)
         {
+            _logger.LogInformation(
+                "Reserving quantity {Quantity} for product {ProductId}",
+                request.Quantity, request.ProductId);
+
             try
             {
-                Console.WriteLine(request.ToString());
-                Console.WriteLine($"Request received: Reserve product {request.ProductId} with quantity {request.Quantity}");
-
-                // Резервируем товар
                 await _productService.ReserveProductStockAsync(request.ProductId, request.Quantity);
 
-                // Получаем текущее количество доступного и зарезервированного товара
-                var stock = await _productService.GetStock(request.ProductId);
-                var reservedStock = await _productService.GetReservedStock(request.ProductId);
+                var stock = await _productService.GetStockAsync(request.ProductId);
+                var reserved = await _productService.GetReservedStockAsync(request.ProductId);
 
-                // Уведомляем наблюдателей об изменении
-                SseController.NotifyProductQuantityChanged(request.ProductId, stock, reservedStock);
+                // Notify via SSE
+                SseController.NotifyProductQuantityChanged(request.ProductId, stock, reserved);
 
-                Console.WriteLine($"Reserved product {request.ProductId}. Stock: {stock}, Reserved stock: {reservedStock}");
+                _logger.LogInformation(
+                    "Reserved product {ProductId}: Stock={Stock}, Reserved={Reserved}",
+                    request.ProductId, stock, reserved);
 
-                return Ok(new { stock = stock, ReservedStock = reservedStock });
+                return Ok(new { stock, reserved });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error reserving product: {ex.Message}");
+                _logger.LogError(ex, "Error reserving stock for product {ProductId}", request.ProductId);
                 return BadRequest(new { Message = ex.Message });
             }
         }
 
-
-        // API для освобождения товара
+        // POST: api/products/release
         [HttpPost("release")]
         public async Task<IActionResult> ReleaseProductStock([FromBody] QuantityRequest request)
         {
+            _logger.LogInformation(
+                "Releasing reserved quantity {Quantity} for product {ProductId}",
+                request.Quantity, request.ProductId);
+
             try
             {
-                Console.WriteLine($"Request received: Release product {request.ProductId} with quantity {request.Quantity}");
-
-                // Освобождаем зарезервированное количество товара
                 await _productService.ReleaseProductStockAsync(request.ProductId, request.Quantity);
-                
-                // Получаем текущее количество доступного и зарезервированного товара
-                var stock = await _productService.GetStock(request.ProductId);
 
-                var reservedStock = await _productService.GetReservedStock(request.ProductId);
+                var stock = await _productService.GetStockAsync(request.ProductId);
+                var reserved = await _productService.GetReservedStockAsync(request.ProductId);
 
-                // Уведомляем наблюдателей об изменении
-                SseController.NotifyProductQuantityChanged(request.ProductId, stock, reservedStock);
+                // Notify via SSE
+                SseController.NotifyProductQuantityChanged(request.ProductId, stock, reserved);
 
-                Console.WriteLine($"Released product {request.ProductId}. Stock: {stock}, Reserved stock: {reservedStock}");
+                _logger.LogInformation(
+                    "Released product {ProductId}: Stock={Stock}, Reserved={Reserved}",
+                    request.ProductId, stock, reserved);
 
-                return Ok(new { Stock = stock, ReservedStock = reservedStock });
+                return Ok(new { stock, reserved });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error releasing product: {ex.Message}");
+                _logger.LogError(ex, "Error releasing stock for product {ProductId}", request.ProductId);
                 return BadRequest(new { Message = ex.Message });
             }
         }
 
-
+        // PUT: api/products/toggleVisibility/{id}
         [Authorize(Roles = "Admin")]
         [HttpPut("toggleVisibility/{id}")]
         public async Task<IActionResult> ToggleVisibility(int id)
         {
-            Console.WriteLine($"Request received: Toggle visibility for product {id}");
-            var result = await _productService.ToggleVisibility(id);
-            return result ? NoContent() : NotFound();
+            _logger.LogInformation("Toggling visibility for product {ProductId}", id);
+            var success = await _productService.ToggleVisibilityAsync(id);
+            return success ? NoContent() : NotFound();
         }
 
+        // DELETE: api/products/{id}
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
-            Console.WriteLine($"Request received: Delete product {id}");
-            var result = await _productService.DeleteProductAsync(id);
-            return result ? NoContent() : NotFound();
+            _logger.LogInformation("Deleting product {ProductId}", id);
+            var success = await _productService.DeleteProductAsync(id);
+            return success ? NoContent() : NotFound();
         }
     }
-
 }

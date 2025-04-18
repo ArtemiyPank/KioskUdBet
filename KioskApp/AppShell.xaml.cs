@@ -1,7 +1,6 @@
 ﻿using KioskApp.Services;
 using KioskApp.ViewModels;
 using KioskApp.Views;
-using Microsoft.Maui.Controls;
 using System.Diagnostics;
 
 namespace KioskApp
@@ -10,14 +9,13 @@ namespace KioskApp
     {
         private readonly IUserService _userService;
 
-
         public AppShell()
         {
             InitializeComponent();
 
             _userService = DependencyService.Get<IUserService>();
 
-            // Register routes
+            // Register navigation routes
             Routing.RegisterRoute(nameof(LoginPage), typeof(LoginPage));
             Routing.RegisterRoute(nameof(RegisterPage), typeof(RegisterPage));
             Routing.RegisterRoute(nameof(ProfilePage), typeof(ProfilePage));
@@ -25,38 +23,38 @@ namespace KioskApp
             Routing.RegisterRoute(nameof(AddProductPage), typeof(AddProductPage));
             Routing.RegisterRoute(nameof(EditProductPage), typeof(EditProductPage));
             Routing.RegisterRoute(nameof(OrdersPage), typeof(OrdersPage));
-
             Routing.RegisterRoute(nameof(CartPage), typeof(CartPage));
 
-
-            MessagingCenter.Subscribe<UserService>(this, "UserStateChanged", (sender) =>
+            // Listen for user login/logout events
+            MessagingCenter.Subscribe<UserService>(this, "UserStateChanged", sender =>
             {
-                Debug.WriteLine("UserService \"UserStateChanged\"");
                 UpdateProfilePage();
-                UpdateTabsBasedOnUserRole();
+                UpdateTabVisibility();
             });
         }
 
+        // Update the profile page view model when user state changes
         private void UpdateProfilePage()
         {
-            var profileViewModel = new ProfileViewModel();
-            profileViewModel.UpdateUserState();
-            Debug.WriteLine($"Updated Profile Page with User: {profileViewModel.CurrentUser?.Email}");
-            if (Shell.Current.CurrentPage is ProfilePage profilePage)
+            var profileVm = new ProfileViewModel();
+            profileVm.UpdateUserState();
+            Debug.WriteLine($"Profile updated for: {profileVm.CurrentUser?.Email}");
+
+            if (CurrentPage is ProfilePage page)
             {
-                profilePage.BindingContext = profileViewModel;
+                page.BindingContext = profileVm;
             }
-            MessagingCenter.Send(this, "UserStateChanged"); // To update the product page
+
+            // Notify other pages of user state change
+            MessagingCenter.Send(this, "UserStateChanged");
         }
 
-
-
-
-        private void UpdateTabsBasedOnUserRole()
+        // Show admin tabs or cart tab based on the user's role
+        private void UpdateTabVisibility()
         {
-            var currentUser = _userService.GetCurrentUser();
+            var user = _userService.GetCurrentUser();
 
-            if (currentUser?.Role == "Admin")
+            if (user?.Role == "Admin")
             {
                 CartTab.IsVisible = false;
                 OrdersTab.IsVisible = true;
@@ -67,12 +65,5 @@ namespace KioskApp
                 OrdersTab.IsVisible = false;
             }
         }
-
-
-
-
     }
-
 }
-
-

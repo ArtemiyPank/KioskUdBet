@@ -1,21 +1,40 @@
 ﻿using KioskAPI.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace KioskAPI.Services
 {
     public interface IUserService
     {
-        Task<User?> Authenticate(string username, string password);
-        Task<(User, string, string)?> AuthenticateWithRefreshToken(string refreshToken);
-        Task<User> Register(User user);
-        Task<List<User>> GetAllUsers();
-        Task<bool> EmailExists(string email);
-        Task<User> GetUserByEmail(string email);
-        Task SaveRefreshToken(int userId, string token, DateTime expiryDate);
-        Task<bool> ValidateRefreshToken(User user, string refreshToken);
-        Task RevokeRefreshToken(User user, string refreshToken);
-        Task<User?> GetUserByRefreshToken(string refreshToken);
-        Task<User> GetUserById(int userId);
+        // Authenticate a user by email and password
+        Task<User?> AuthenticateAsync(string email, string password);
+
+        // Authenticate using a refresh token and return new tokens
+        Task<(User user, string newAccessToken, string newRefreshToken)?> AuthenticateWithRefreshTokenAsync(string refreshToken);
+
+        // Register a new user
+        Task<User> RegisterAsync(User user);
+
+        // Retrieve all users
+        Task<List<User>> GetAllUsersAsync();
+
+        // Check if an email is already registered
+        Task<bool> EmailExistsAsync(string email);
+
+        // Retrieve a user by email
+        Task<User?> GetUserByEmailAsync(string email);
+
+        // Save a refresh token for the specified user
+        Task SaveRefreshTokenAsync(int userId, string token, DateTime expiryDate);
+
+        // Validate that a refresh token belongs to the user
+        Task<bool> ValidateRefreshTokenAsync(User user, string refreshToken);
+
+        // Revoke a refresh token for the user
+        Task RevokeRefreshTokenAsync(User user, string refreshToken);
+
+        // Retrieve the user associated with a given refresh token
+        Task<User?> GetUserByRefreshTokenAsync(string refreshToken);
+
+        // Retrieve a user by their identifier
+        Task<User> GetUserByIdAsync(int userId);
     }
 }

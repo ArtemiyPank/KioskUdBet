@@ -1,16 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KioskApp.Services
+﻿namespace KioskApp.Services
 {
     public interface ISseService
     {
-        //Task StartMonitoringOrderStatus(int orderId, Action<string> onStatusUpdate, CancellationToken cancellationToken);
-        //Task StartOrderStatusSseAsync(int orderId, Action<string> onStatusUpdate, CancellationToken cancellationToken);
-        Task StartMonitoringAllProductsStock(Action<int, int, int> onQuantityUpdate, CancellationToken cancellationToken);
-        Task StartAllProductsStockSseAsync(Action<int, int, int> onQuantityUpdate, CancellationToken cancellationToken);
+        // Subscribe to stock updates for all products via Server-Sent Events
+        // onQuantityUpdate: invoked with (productId, stock, reservedStock)
+        Task StartMonitoringAllProductsStockAsync(
+            Action<int, int, int> onQuantityUpdate,
+            CancellationToken cancellationToken);
+
+        // Alternate method name for starting SSE monitoring
+        Task StartAllProductsStockSseAsync(
+            Action<int, int, int> onQuantityUpdate,
+            CancellationToken cancellationToken);
     }
 }

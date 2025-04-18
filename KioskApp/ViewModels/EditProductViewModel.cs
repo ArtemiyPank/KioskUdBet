@@ -1,11 +1,8 @@
-﻿using KioskApp.Models;
+﻿using System.Diagnostics;
+using System.Windows.Input;
+using KioskApp.Models;
 using KioskApp.Services;
 using MvvmHelpers;
-using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using Microsoft.Maui.Controls;
 
 namespace KioskApp.ViewModels
 {
@@ -21,10 +18,11 @@ namespace KioskApp.ViewModels
         public EditProductViewModel()
         {
             _productApiService = DependencyService.Get<IProductApiService>();
-            ChooseImageCommand = new Command(async () => await ChooseImage());
-            UpdateProductCommand = new Command(async () => await UpdateProduct());
+            ChooseImageCommand = new Command(async () => await ChooseImageAsync());
+            UpdateProductCommand = new Command(async () => await UpdateProductAsync());
         }
 
+        // The product being edited, populated via QueryProperty
         private Product product;
         public Product Product
         {
@@ -33,39 +31,46 @@ namespace KioskApp.ViewModels
             {
                 product = value;
                 OnPropertyChanged();
-                LoadProductDetails(value);
+                LoadProductDetails();
             }
         }
 
+        // Command to open file picker for image selection
         public ICommand ChooseImageCommand { get; }
+
+        // Command to submit product updates
         public ICommand UpdateProductCommand { get; }
 
+        // Path of the selected or existing image for display
         public string ImagePath
         {
             get => _imagePath;
             set => SetProperty(ref _imagePath, value);
         }
 
+        // Error message for validation or server errors
         public string ErrorMessage
         {
             get => _errorMessage;
             set => SetProperty(ref _errorMessage, value);
         }
 
-        private void LoadProductDetails(Product product)
+        // Initialize view state from the loaded product
+        private void LoadProductDetails()
         {
-            if (product != null)
+            if (Product != null)
             {
-                ImagePath = product.ImageUrl; // Assuming the URL can be used directly
+                ImagePath = Product.ImageUrl;
             }
         }
 
-        private async Task ChooseImage()
+        // Let user pick a new image file
+        private async Task ChooseImageAsync()
         {
             var result = await FilePicker.PickAsync(new PickOptions
             {
                 FileTypes = FilePickerFileType.Images,
-                PickerTitle = "Pick an image"
+                PickerTitle = "Select a product image"
             });
 
             if (result != null)
@@ -76,43 +81,41 @@ namespace KioskApp.ViewModels
             }
         }
 
-        private async Task UpdateProduct()
+        // Validate inputs and call API to update the product
+        private async Task UpdateProductAsync()
         {
-            if (!Validate())
-            {
-                return;
-            }
+            if (!ValidateInputs()) return;
 
             try
             {
-                product.LastUpdated = DateTime.Now;
+                Product.LastUpdated = DateTime.UtcNow;
 
-                await _productApiService.UpdateProduct(Product, _imageStream, _imageName);
-                _imageStream?.Dispose(); // Закрытие потока после использования
-                _imageStream = null; // Сброс переменной после использования
+                await _productApiService.UpdateProductAsync(Product, _imageStream, _imageName);
 
-                // Отправка сообщения об обновлении продуктов
+                _imageStream?.Dispose();
+                _imageStream = null;
+
                 MessagingCenter.Send(this, "ProductUpdated");
-
-                await Shell.Current.GoToAsync(".."); // Navigate back to the previous page
+                await Shell.Current.GoToAsync("..");
             }
             catch (HttpRequestException ex)
             {
-                Debug.WriteLine($"HttpRequestException: {ex.Message}");
-                ErrorMessage = "An error occurred while updating the product.";
+                Debug.WriteLine($"HTTP error updating product: {ex.Message}");
+                ErrorMessage = "Network error occurred.";
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error updating product: {ex.Message}");
+                Debug.WriteLine($"Unexpected error updating product: {ex.Message}");
                 ErrorMessage = "An unexpected error occurred.";
             }
         }
 
-        private bool Validate()
+        // Ensure all required fields are valid before submission
+        private bool ValidateInputs()
         {
-            if (string.IsNullOrEmpty(Product.Name) ||
-                string.IsNullOrEmpty(Product.Description) ||
-                string.IsNullOrEmpty(Product.Category) ||
+            if (string.IsNullOrWhiteSpace(Product.Name) ||
+                string.IsNullOrWhiteSpace(Product.Description) ||
+                string.IsNullOrWhiteSpace(Product.Category) ||
                 !Product.Price.HasValue ||
                 !Product.Stock.HasValue)
             {
@@ -137,5 +140,3 @@ namespace KioskApp.ViewModels
         }
     }
 }
-
-

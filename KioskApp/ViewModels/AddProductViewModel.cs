@@ -1,11 +1,8 @@
-﻿using KioskApp.Models;
+﻿using System.Diagnostics;
+using System.Windows.Input;
+using KioskApp.Models;
 using KioskApp.Services;
 using MvvmHelpers;
-using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using Microsoft.Maui.Controls;
 
 namespace KioskApp.ViewModels
 {
@@ -21,63 +18,75 @@ namespace KioskApp.ViewModels
         {
             _productApiService = DependencyService.Get<IProductApiService>();
             NewProduct = new Product();
-            ChooseImageCommand = new Command(async () => await ChooseImage());
-            AddProductCommand = new Command(async () => await AddProduct());
+            ChooseImageCommand = new Command(async () => await ChooseImageAsync());
+            AddProductCommand = new Command(async () => await AddProductAsync());
         }
 
+        // The product being created
         public Product NewProduct { get; set; }
 
+        // Command to pick an image file
         public ICommand ChooseImageCommand { get; }
+
+        // Command to submit the new product
         public ICommand AddProductCommand { get; }
 
+        // Path of the selected image for display in the UI
         public string ImagePath
         {
             get => _imagePath;
             set => SetProperty(ref _imagePath, value);
         }
 
+        // Error message to show validation or upload errors
         public string ErrorMessage
         {
             get => _errorMessage;
             set => SetProperty(ref _errorMessage, value);
         }
 
-
-        private async Task AddProduct()
+        // Validate inputs and call API to add the product
+        private async Task AddProductAsync()
         {
             try
             {
-                if (!Validate()) return;
+                if (!ValidateInputs()) return;
 
-                NewProduct.ImageUrl = "";
+                // Temporarily clear ImageUrl; API will set it
+                NewProduct.ImageUrl = string.Empty;
 
-                await _productApiService.AddProduct(NewProduct, _imageStream, _imageName);
+                await _productApiService.AddProductAsync(NewProduct, _imageStream, _imageName);
 
-                NewProduct = new Product(); // Очистка формы после добавления продукта
-                _imageStream?.Dispose(); // Закрытие потока после использования
-                _imageStream = null; // Сброс переменной после использования
+                // Reset form
+                NewProduct = new Product();
+                _imageStream?.Dispose();
+                _imageStream = null;
 
-                await Shell.Current.GoToAsync(".."); // Navigate back to the previous page
+                // Navigate back to the previous page
+                await Shell.Current.GoToAsync("..");
 
+                // Notify other parts of the app that a product was added
                 MessagingCenter.Send(this, "ProductAdded");
             }
             catch (HttpRequestException ex)
             {
-                Debug.WriteLine($"HttpRequestException: {ex.Message}");
+                Debug.WriteLine($"HTTP error adding product: {ex.Message}");
+                ErrorMessage = "Network error occurred.";
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error adding product: {ex.Message}");
+                Debug.WriteLine($"Unexpected error adding product: {ex.Message}");
+                ErrorMessage = "An unexpected error occurred.";
             }
         }
 
-
-        private async Task ChooseImage()
+        // Launch file picker to choose an image
+        private async Task ChooseImageAsync()
         {
             var result = await FilePicker.PickAsync(new PickOptions
             {
                 FileTypes = FilePickerFileType.Images,
-                PickerTitle = "Pick an image"
+                PickerTitle = "Select a product image"
             });
 
             if (result != null)
@@ -88,22 +97,22 @@ namespace KioskApp.ViewModels
             }
         }
 
-
-        private bool Validate()
+        // Ensure all required fields are filled and valid
+        private bool ValidateInputs()
         {
-            if (string.IsNullOrEmpty(NewProduct.Name) ||
-                string.IsNullOrEmpty(NewProduct.Description) ||
-                string.IsNullOrEmpty(NewProduct.Category) ||
+            if (string.IsNullOrWhiteSpace(NewProduct.Name) ||
+                string.IsNullOrWhiteSpace(NewProduct.Description) ||
+                string.IsNullOrWhiteSpace(NewProduct.Category) ||
                 !NewProduct.Price.HasValue ||
                 !NewProduct.Stock.HasValue)
             {
-                ErrorMessage = "All fields are required.";
+                ErrorMessage = "All fields must be completed.";
                 return false;
             }
 
             if (_imageStream == null)
             {
-                ErrorMessage = "Product image is required.";
+                ErrorMessage = "Please select an image.";
                 return false;
             }
 
@@ -122,7 +131,5 @@ namespace KioskApp.ViewModels
             ErrorMessage = string.Empty;
             return true;
         }
-
-
     }
 }

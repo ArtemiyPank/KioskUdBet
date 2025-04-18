@@ -1,28 +1,40 @@
 ﻿using KioskApp.Models;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using static KioskApp.Services.ProductApiService;
 
 namespace KioskApp.Services
 {
     public interface IProductApiService
     {
-        Task<Stream> DownloadProductImage(string imageUrl);
-        Task<List<Product>> GetProducts();
-        Task<Product> GetProductById(int productId);
-        Task<Product> AddProduct(Product product, Stream imageStream, string imageName);
-        Task<bool> DeleteProduct(int productId);
-        Task<bool> UpdateProduct(Product product, Stream imageStream, string imageName);
-        Task<bool> ToggleVisibility(int id);
+        // Download an image stream by URL
+        Task<Stream> DownloadProductImageAsync(string imageUrl);
 
-        Task<ProductStockResponse> ReserveProductStock(int productId, int quantity); // Резервирование товара
-        Task<ProductStockResponse> ReleaseProductStock(int productId, int quantity); // Освобождение товара
-        Task<int> GetAvailableStock(int productId); // Получение доступного количества товара
+        // Retrieve all products from the API
+        Task<List<Product>> GetProductsAsync();
 
-        Task<Order> PlaceOrder(Order order);
+        // Retrieve a single product by its ID
+        Task<Product> GetProductByIdAsync(int productId);
 
-        // Новый метод для подтверждения заказа
-        Task ConfirmOrder(int productId, int quantity);
+        // Add a new product with its image
+        Task<Product> AddProductAsync(Product product, Stream imageStream, string imageName);
+
+        // Delete an existing product by its ID
+        Task<bool> DeleteProductAsync(int productId);
+
+        // Update product data and image
+        Task<bool> UpdateProductAsync(Product product, Stream imageStream, string imageName);
+
+        // Toggle visibility of a product
+        Task<bool> ToggleVisibilityAsync(int productId);
+
+        // Reserve stock for a product and return updated stock info
+        Task<ProductStockResponse> ReserveProductStockAsync(int productId, int quantity);
+
+        // Release reserved stock and return updated stock info
+        Task<ProductStockResponse> ReleaseProductStockAsync(int productId, int quantity);
+
+        // Get the current available stock for a product
+        Task<int> GetAvailableStockAsync(int productId);
+
+        // Confirm delivery of a product and adjust stock
+        Task ConfirmOrderAsync(int productId, int quantity);
     }
 }

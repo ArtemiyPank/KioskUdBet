@@ -1,26 +1,40 @@
 ﻿using KioskAPI.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace KioskAPI.Services
 {
     public interface IProductService
     {
-        Task<List<Product>> GetProducts();
-        Task<Product> AddProduct(Product product);
-        Task<Product> GetProductByIdAsync(int productId);
-        Task<Product> UpdateProduct(int id, Product product);
+        // GET: retrieve all products
+        Task<List<Product>> GetProductsAsync();
+
+        // POST: add a new product
+        Task<Product> AddProductAsync(Product product);
+
+        // GET: retrieve a product by its ID
+        Task<Product?> GetProductByIdAsync(int productId);
+
+        // PUT: update an existing product
+        Task<Product> UpdateProductAsync(int id, Product product);
+
+        // DELETE: remove a product by its ID
         Task<bool> DeleteProductAsync(int productId);
-        Task<bool> ToggleVisibility(int id);
 
-        Task<int> ReserveProductStockAsync(int productId, int quantity); // Резервирование товара при добавлении в заказ
-        Task<int> ReleaseProductStockAsync(int productId, int quantity); // Освобождение товара при отмене или изменении заказа
+        // PUT: toggle the visibility flag of a product
+        Task<bool> ToggleVisibilityAsync(int id);
 
-        Task<int> GetStock(int productId); // Получение доступного количества товара
-        Task<int> GetReservedStock(int productId); // Получение зарезервированного количества товара
+        // POST: reserve stock for a product
+        Task<int> ReserveProductStockAsync(int productId, int quantity);
 
-        Task DeletingDeliveredProducts(int productId, int quantity); // Удаление доставленного товара
-        
-        Task ConfirmOrderAsync(int productId, int quantity); // Подтверждение заказа при доставке
+        // POST: release reserved stock for a product
+        Task<int> ReleaseProductStockAsync(int productId, int quantity);
+
+        // GET: get the current stock level of a product
+        Task<int> GetStockAsync(int productId);
+
+        // GET: get the current reserved stock level of a product
+        Task<int> GetReservedStockAsync(int productId);
+
+        // POST: confirm an order by deducting delivered quantity from stock
+        Task ConfirmOrderAsync(int productId, int quantity);
     }
 }

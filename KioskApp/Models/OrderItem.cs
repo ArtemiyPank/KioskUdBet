@@ -1,143 +1,126 @@
-﻿using KioskApp.Helpers;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 using KioskApp.Helpers;
 
 namespace KioskApp.Models
 {
+    // Represents a single item in an order and manages stock adjustments
     public class OrderItem : INotifyPropertyChanged
     {
-        //private readonly AppState _appState;
-        //public OrderItem(AppState appState)
-        //{
-        //    _appState = appState;
-        //}
-        public OrderItem()
-        {
-            // Default to false to prevent automatic stock reservation during deserialization
-            ShouldManageStock = false;
-        }
+        // Flag to skip stock operations during initialization or deserialization
+        private bool _isInitializing;
 
-        private bool _isInitializing = false;
-
+        // Unique identifier for this order item
         public int Id { get; set; }
+
+        // Identifier of the associated product
         public int ProductId { get; set; }
 
-        public bool ShouldManageStock { get; set; } = true;
-
-        //public Product Product { get; set; }
+        // Determines whether stock changes should be applied when quantity changes
+        public bool ShouldManageStock { get; set; }
 
         private Product _product;
+        // The product referenced by this order item
         public Product Product
         {
             get => _product;
             set
             {
-                // Don't trigger stock operations during property setting
                 _product = value;
                 ProductId = value?.Id ?? 0;
                 OnPropertyChanged(nameof(Product));
+                OnPropertyChanged(nameof(TotalPrice));
             }
         }
 
-
-
-        public decimal TotalPrice => Product?.Price * Quantity ?? 0;
-
-
+        // Quantity of the product in this order item
         private int _quantity;
         public int Quantity
         {
             get => _quantity;
             set
             {
-                if (_quantity != value)
-                {
-                    // Skip stock operations if we're initializing or deserializing
-                    if (!_isInitializing && !DeserializationHelper.IsDeserializing && ShouldManageStock && Product != null)
-                    {
-                        try
-                        {
-                            if (_quantity > value)
-                            {
-                                Debug.WriteLine($"Releasing stock for Product ID: {ProductId}, Amount: {_quantity - value}");
-                                Product.ReleaseStock(_quantity - value);
-                            }
-                            else if (value > _quantity)
-                            {
-                                Debug.WriteLine($"Reserving stock for Product ID: {ProductId}, Amount: {value - _quantity}");
-                                Product.ReserveStock(value - _quantity);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"Stock operation failed: {ex.Message}");
-                            throw;
-                        }
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"Skipping stock management for Product ID: {ProductId} (initializing or display only)");
-                    }
+                if (_quantity == value) return;
 
-                    _quantity = value;
-                    OnPropertyChanged(nameof(Quantity));
-                    OnPropertyChanged(nameof(TotalPrice));
+                if (!_isInitializing
+                    && !DeserializationHelper.IsDeserializing
+                    && ShouldManageStock
+                    && Product != null)
+                {
+                    AdjustStock(value);
+                }
+                else
+                {
+                    Debug.WriteLine($"Skipping stock management for ProductId {ProductId}");
+                }
+
+                _quantity = value;
+                OnPropertyChanged(nameof(Quantity));
+                OnPropertyChanged(nameof(TotalPrice));
+            }
+        }
+
+        // Computed total price based on product price and quantity
+        public decimal TotalPrice => Product?.Price * Quantity ?? 0;
+
+        // Default constructor disables stock management until loaded
+        public OrderItem()
+        {
+            ShouldManageStock = false;
+        }
+
+        // Adjusts the product stock based on the change in quantity
+        private void AdjustStock(int newQuantity)
+        {
+            var delta = newQuantity - _quantity;
+            try
+            {
+                if (delta > 0)
+                {
+                    Debug.WriteLine($"Reserving {delta} units of ProductId {ProductId}");
+                    Product.ReserveStock(delta);
+                }
+                else if (delta < 0)
+                {
+                    Debug.WriteLine($"Releasing {-delta} units of ProductId {ProductId}");
+                    Product.ReleaseStock(-delta);
                 }
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Stock operation failed: {ex.Message}");
+                throw;
+            }
         }
 
-
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        public Product? GetProduct(AppState appState)
-        {
-
-            if (LoadProductFromAppState(appState)) return _product;
-
-            Debug.WriteLine($"Load product from AppState was failed");
-
-            return null;
-        }
-
-
-        // Метод для поиска и установки продукта из AppState
+        // Attempts to load the Product instance from global application state
         public bool LoadProductFromAppState(AppState appState)
         {
-            if (appState == null || appState.Products == null)
+            if (appState?.Products == null)
             {
-                Debug.WriteLine("AppState or Products list is null");
+                Debug.WriteLine("AppState or Products collection is null");
                 return false;
             }
 
-            // Ищем продукт в AppState по ProductId
             var product = appState.Products.FirstOrDefault(p => p.Id == ProductId);
-            if (product != null)
+            if (product == null)
             {
-                Product = product;
-                Debug.WriteLine($"Product with ID {ProductId} found and set in OrderItem.");
-                return true;
-            }
-            else
-            {
-                Debug.WriteLine($"Product with ID {ProductId} not found in AppState.");
+                Debug.WriteLine($"ProductId {ProductId} not found in AppState");
                 return false;
             }
+
+            Product = product;
+            return true;
         }
 
-
+        // Initializes properties from JSON without triggering stock logic
         public void InitializeFromJson(int productId, int quantity)
         {
             _isInitializing = true;
             try
             {
                 ProductId = productId;
-                _quantity = quantity; // Set directly to avoid triggering stock operations
+                _quantity = quantity;
                 OnPropertyChanged(nameof(Quantity));
                 OnPropertyChanged(nameof(TotalPrice));
             }
@@ -147,16 +130,17 @@ namespace KioskApp.Models
             }
         }
 
+        // Retrieves the Product after attempting to load it from AppState
+        public Product? GetProduct(AppState appState) =>
+            LoadProductFromAppState(appState) ? Product : null;
 
+        // Notify UI of property changes
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string name) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        public override string ToString()
-        {
-            string rez = $"------ OrderItem {Id} ------ \n" +
-                $"Product: {Product.ToString()}\n" +
-                $"Quantity: {Quantity}";
-
-            return rez;
-        }
-
+        // String representation for debugging purposes
+        public override string ToString() =>
+            $"OrderItem {Id}: ProductId={ProductId}, Quantity={Quantity}, TotalPrice={TotalPrice}";
     }
 }

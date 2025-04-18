@@ -1,14 +1,11 @@
-﻿using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
-using System.Windows.Input;
+﻿using KioskApp.Helpers;
 using KioskApp.Models;
 using KioskApp.Services;
-using MvvmHelpers;
-using Microsoft.Maui.Controls;
-using System.Threading.Tasks;
 using KioskApp.Views;
-using KioskApp.Helpers;
+using MvvmHelpers;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Windows.Input;
 
 namespace KioskApp.ViewModels
 {
@@ -20,30 +17,31 @@ namespace KioskApp.ViewModels
         private readonly CartViewModel _cartViewModel;
         private readonly ISseService _sseService;
         private readonly AppState _appState;
+        private CancellationTokenSource _cts;
 
-        private CancellationTokenSource? _cts;
-
+        // Backing collection is in AppState so it's shared across viewmodels
         public ObservableCollection<Product> Products => _appState.Products;
 
-        public ICommand LoadProductsCommand { get; private set; }
-        public ICommand NavigateToAddProductCommand { get; private set; }
-        public ICommand DeleteProductCommand { get; private set; }
-        public ICommand NavigateToEditProductCommand { get; private set; }
-        public ICommand ToggleVisibilityCommand { get; private set; }
+        // Commands bound to the UI
+        public ICommand LoadProductsCommand { get; }
+        public ICommand ReloadProductsCommand { get; }
+        public ICommand NavigateToAddProductCommand { get; }
+        public ICommand NavigateToEditProductCommand { get; }
+        public ICommand DeleteProductCommand { get; }
+        public ICommand ToggleVisibilityCommand { get; }
         public ICommand AddToCartCommand { get; }
         public ICommand SpeakDescriptionCommand { get; }
 
-        public bool IsAdmin
-        {
-            get
-            {
-                var currentUser = _userService.GetCurrentUser();
-                Debug.WriteLine($"Checking if user is admin: {(currentUser?.Role == "Admin")}");
-                return currentUser?.Role == "Admin";
-            }
-        }
+        // Only admins may see hidden products
+        public bool IsAdmin => _userService.GetCurrentUser()?.Role == "Admin";
 
-        public ProductsViewModel(IProductApiService productApiService, IUserService userService, ICacheService cacheService, CartViewModel cartViewModel, ISseService sseService, AppState appState)
+        public ProductsViewModel(
+            IProductApiService productApiService,
+            IUserService userService,
+            ICacheService cacheService,
+            CartViewModel cartViewModel,
+            ISseService sseService,
+            AppState appState)
         {
             _productApiService = productApiService;
             _userService = userService;
@@ -52,215 +50,145 @@ namespace KioskApp.ViewModels
             _sseService = sseService;
             _appState = appState;
 
-            _appState.TestStr = "was initialized in ProductsViewModel";
+            LoadProductsCommand = new Command(async () => await LoadProductsAsync());
+            ReloadProductsCommand = new Command(async () => await LoadProductsAsync());
+            NavigateToAddProductCommand = new Command(async () => await Shell.Current.GoToAsync(nameof(AddProductPage)));
+            NavigateToEditProductCommand = new Command<Product>(async p => await NavigateToEditProductAsync(p));
+            DeleteProductCommand = new Command<Product>(async p => await DeleteProductAsync(p));
+            ToggleVisibilityCommand = new Command<Product>(async p => await ToggleVisibilityAsync(p));
+            AddToCartCommand = new Command<Product>(p => _cartViewModel.AddToCartCommand.Execute(p));
+            SpeakDescriptionCommand = new Command<Product>(async p => await SpeakDescriptionAsync(p));
 
-
-            AddToCartCommand = new Command<Product>((product) => OnAddToCart(product));
-            LoadProductsCommand = new Command(async () => await LoadProducts());
-
-            NavigateToAddProductCommand = new Command(async () => await NavigateToAddProduct());
-            DeleteProductCommand = new Command<Product>(async (product) => await DeleteProduct(product));
-            NavigateToEditProductCommand = new Command<Product>(async (product) => await NavigateToEditProduct(product));
-            ToggleVisibilityCommand = new Command<Product>(async (product) => await ToggleVisibility(product));
-            SpeakDescriptionCommand = new Command<Product>(async product => await SpeakDescriptionAsync(product));
-
-            Debug.WriteLine("ProductsViewModel initialized.");
+            // Automatically load products and start monitoring
             LoadProductsCommand.Execute(null);
 
-            MessagingCenter.Subscribe<AddProductViewModel>(this, "ProductAdded", async (sender) =>
+            // Refresh list on relevant messages
+            MessagingCenter.Subscribe<AddProductViewModel>(this, "ProductAdded", async _ => await LoadProductsAsync());
+            MessagingCenter.Subscribe<EditProductViewModel>(this, "ProductUpdated", async _ => await LoadProductsAsync());
+            MessagingCenter.Subscribe<AppShell>(this, "UserStateChanged", async _ =>
             {
-                Debug.WriteLine("Product added, reloading products.");
-                await LoadProducts();
-            });
-
-            MessagingCenter.Subscribe<EditProductViewModel>(this, "ProductUpdated", async (sender) =>
-            {
-                Debug.WriteLine("Product updated, reloading products.");
-                await LoadProducts();
-            });
-
-            MessagingCenter.Subscribe<AppShell>(this, "UserStateChanged", async (sender) =>
-            {
-                Debug.WriteLine("User state changed, reloading products.");
                 OnPropertyChanged(nameof(IsAdmin));
-                await LoadProducts();
+                await LoadProductsAsync();
             });
         }
 
-        public async Task LoadProducts()
+        // Fetch products, apply caching, and start SSE monitoring
+        private async Task LoadProductsAsync()
         {
+            if (IsBusy) return;
+            IsBusy = true;
+
+            StopMonitoringProducts();
+            Products.Clear();
+
             try
             {
-                Debug.WriteLine("Loading products...");
-                StopMonitoringProducts();
+                var remoteList = await _productApiService.GetProductsAsync();
+                var cachedIds = new HashSet<int>(_cacheService.GetCachedProductIds());
 
-                _appState.Products.Clear(); // Clear the list before loading new data
-
-                var products = await _productApiService.GetProducts();
-                var cachedProductIds = _cacheService.GetCachedProductIds();
-
-                foreach (var product in products)
+                foreach (var product in remoteList)
                 {
-                    cachedProductIds.Remove(product.Id);
-                    Debug.WriteLine($"Processing product {product.Id}: {product.Name}");
-
                     if (!IsAdmin && product.IsHidden)
-                    {
-                        Debug.WriteLine($"Product {product.Id} is hidden and user is not admin. Skipping.");
                         continue;
-                    }
 
-                    var cachedProduct = await _cacheService.GetProductAsync(product.Id);
-                    if (cachedProduct != null)
+                    // Sync cache
+                    if (cachedIds.Contains(product.Id))
                     {
-                        Debug.WriteLine($"Product {product.Id} found in cache.");
-                        if (cachedProduct.LastUpdated != product.LastUpdated)
+                        var cached = await _cacheService.GetProductAsync(product.Id);
+                        if (cached.LastUpdated != product.LastUpdated)
                         {
-                            Debug.WriteLine($"Product {product.Id} has been updated, downloading new image.");
-                            var imageStream = await _productApiService.DownloadProductImage(product.ImageUrl);
-                            await _cacheService.SaveProductAsync(product, imageStream);
+                            var stream = await _productApiService.DownloadProductImageAsync(product.ImageUrl);
+                            await _cacheService.SaveProductAsync(product, stream);
                         }
-                        product.ImageUrl = await _cacheService.GetProductImagePath(product.Id);
                     }
                     else
                     {
-                        Debug.WriteLine($"Product {product.Id} not found in cache, downloading image.");
-
-                        var imageStream = await _productApiService.DownloadProductImage(product.ImageUrl);
-
-                        await _cacheService.SaveProductAsync(product, imageStream);
-
-                        product.ImageUrl = await _cacheService.GetProductImagePath(product.Id);
+                        var stream = await _productApiService.DownloadProductImageAsync(product.ImageUrl);
+                        await _cacheService.SaveProductAsync(product, stream);
                     }
-                    Debug.WriteLine(product.ToString());
 
-                    _appState.Products.Add(product);
+                    product.ImageUrl = await _cacheService.GetProductImagePath(product.Id);
+                    Products.Add(product);
                 }
-
-                Debug.WriteLine("Finished loading products.");
-                StartMonitoringProducts();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error loading products: {ex.Message}");
             }
-        }
-
-
-
-
-        public void StartMonitoringProducts()
-        {
-            _cts = new CancellationTokenSource();
-            Debug.WriteLine("Started monitoring product stock via SSE.");
-            _sseService.StartMonitoringAllProductsStock(UpdateStock, _cts.Token);
-        }
-
-        public void StopMonitoringProducts()
-        {
-            if (_cts != null)
+            finally
             {
-                Debug.WriteLine("Stopped monitoring product stock.");
-                _cts.Cancel();
-                _cts.Dispose();
-                _cts = null;
+                StartMonitoringProducts();
+                IsBusy = false;
             }
         }
 
+        // Begin listening to server-sent events for real-time stock updates
+        private void StartMonitoringProducts()
+        {
+            _cts = new CancellationTokenSource();
+            _sseService.StartMonitoringAllProductsStockAsync(UpdateStock, _cts.Token);
+        }
+
+        // Stop listening to SSE updates
+        private void StopMonitoringProducts()
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
+        }
+
+        // Update a single product's stock values
         private void UpdateStock(int productId, int stock, int reservedStock)
         {
-            Debug.WriteLine($"Updating stock for product {productId}. Stock: {stock}, Reserved: {reservedStock}");
-            var product = Products.FirstOrDefault(p => p.Id == productId);
-            if (product != null)
+            var prod = Products.FirstOrDefault(p => p.Id == productId);
+            if (prod != null)
             {
-                product.Stock = stock;
-                product.ReservedStock = reservedStock;  // Обновляем зарезервированное количество
+                prod.Stock = stock;
+                prod.ReservedStock = reservedStock;
                 OnPropertyChanged(nameof(Products));
             }
         }
 
-
-        private async Task NavigateToAddProduct()
+        // Navigate to edit page, passing the selected product
+        private async Task NavigateToEditProductAsync(Product product)
         {
-            Debug.WriteLine("Navigating to AddProductPage.");
-            await Shell.Current.GoToAsync(nameof(AddProductPage));
+            var navParams = new Dictionary<string, object> { ["Product"] = product };
+            await Shell.Current.GoToAsync(nameof(EditProductPage), navParams);
         }
 
-        private async Task NavigateToEditProduct(Product product)
+        // Toggle visibility via API and refresh list
+        private async Task ToggleVisibilityAsync(Product product)
         {
-            Debug.WriteLine($"Navigating to EditProductPage for product {product.Id}.");
-            var navigationParameter = new Dictionary<string, object>
-            {
-                { "Product", product }
-            };
-            await Shell.Current.GoToAsync(nameof(EditProductPage), navigationParameter);
-        }
-
-        private async Task ToggleVisibility(Product product)
-        {
-            Debug.WriteLine($"Toggling visibility for product {product.Id}.");
-            var result = await _productApiService.ToggleVisibility(product.Id);
-            if (result)
+            if (await _productApiService.ToggleVisibilityAsync(product.Id))
             {
                 product.IsHidden = !product.IsHidden;
-                Debug.WriteLine($"Product {product.Id} visibility changed to {product.IsHidden}.");
-                await LoadProducts();
+                await LoadProductsAsync();
             }
         }
 
-        private async Task DeleteProduct(Product product)
+        // Delete via API and refresh list
+        private async Task DeleteProductAsync(Product product)
         {
-            Debug.WriteLine($"Deleting product {product.Id}.");
-            var result = await _productApiService.DeleteProduct(product.Id);
-            if (result)
+            if (await _productApiService.DeleteProductAsync(product.Id))
             {
-                Debug.WriteLine($"Product {product.Id} deleted.");
-                _appState.Products.Remove(product);
-                await LoadProducts();
+                Products.Remove(product);
             }
         }
 
-        private void OnAddToCart(Product product)
-        {
-            Debug.WriteLine($"Adding product {product.Id} to cart.");
-            _cartViewModel.AddToCartCommand.Execute(product);
-        }
-
-        public async Task ConfirmOrder(int productId, int quantity)
-        {
-            Debug.WriteLine($"Confirming order for product {productId} with quantity {quantity}.");
-            await _productApiService.ConfirmOrder(productId, quantity);
-        }
-
+        // Text-to-speech for product descriptions
         private async Task SpeakDescriptionAsync(Product product)
         {
-            if (string.IsNullOrWhiteSpace(product?.Description))
-                return;
+            if (string.IsNullOrWhiteSpace(product?.Description)) return;
 
             try
             {
-                var settings = new SpeechOptions
-                {
-                    Volume = 1.0f,
-                    Pitch = 1.0f
-                };
+                var settings = new SpeechOptions { Volume = 1.0f, Pitch = 1.0f };
                 await TextToSpeech.Default.SpeakAsync(product.Description, settings);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"TTS error: {ex.Message}");
             }
-        }
-
-
-        public void PrintProducts()
-        {
-            Debug.WriteLine("==================== Products in ProductsViewModel ====================");
-            foreach (var product in Products)
-            {
-                Debug.WriteLine(product.ToString());
-            }
-            Debug.WriteLine("=======================================================================");
         }
     }
 }
